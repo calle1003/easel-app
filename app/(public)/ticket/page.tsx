@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Ticket, 
@@ -38,7 +38,6 @@ interface CodeValidationResult {
 
 export default function TicketPurchasePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [performances, setPerformances] = useState<Performance[]>([]);
   const [selectedPerformance, setSelectedPerformance] = useState<Performance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +61,28 @@ export default function TicketPurchasePage() {
     performanceId: '',
   });
 
+  // 確認画面から戻ってきた場合、sessionStorageから復元
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('orderData');
+    if (savedData) {
+      try {
+        const orderData = JSON.parse(savedData);
+        setHasExchangeCode(orderData.hasExchangeCode);
+        setExchangeCodes(orderData.exchangeCodes.length > 0 ? orderData.exchangeCodes : ['']);
+        setGeneralQuantity(orderData.generalQuantity);
+        setReservedQuantity(orderData.reservedQuantity);
+        setFormData({
+          name: orderData.name,
+          email: orderData.email,
+          phone: orderData.phone,
+          performanceId: orderData.performanceId.toString(),
+        });
+      } catch (error) {
+        console.error('Failed to restore order data:', error);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchPerformances = async () => {
       try {
@@ -71,7 +92,27 @@ export default function TicketPurchasePage() {
         }
         const data = await response.json();
         setPerformances(data);
-        if (data.length > 0) {
+        
+        // sessionStorageからの復元データがある場合はそれを使用
+        const savedData = sessionStorage.getItem('orderData');
+        if (savedData) {
+          try {
+            const orderData = JSON.parse(savedData);
+            const savedPerf = data.find((p: Performance) => p.id === orderData.performanceId);
+            if (savedPerf) {
+              setSelectedPerformance(savedPerf);
+            } else if (data.length > 0) {
+              setSelectedPerformance(data[0]);
+              setFormData((f) => ({ ...f, performanceId: data[0].id.toString() }));
+            }
+          } catch (error) {
+            console.error('Failed to parse saved data:', error);
+            if (data.length > 0) {
+              setSelectedPerformance(data[0]);
+              setFormData((f) => ({ ...f, performanceId: data[0].id.toString() }));
+            }
+          }
+        } else if (data.length > 0) {
           setSelectedPerformance(data[0]);
           setFormData((f) => ({ ...f, performanceId: data[0].id.toString() }));
         }
@@ -271,13 +312,14 @@ export default function TicketPurchasePage() {
       discountedGeneralCount,
       discountAmount: calculations.discountAmount,
       total: calculations.total,
-      customerName: formData.name,
-      customerEmail: formData.email,
-      customerPhone: formData.phone,
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
     };
 
-    const encoded = encodeURIComponent(JSON.stringify(orderData));
-    router.push(`/easel-live/vol2/ticket/confirm?data=${encoded}`);
+    // sessionStorageにデータを保存
+    sessionStorage.setItem('orderData', JSON.stringify(orderData));
+    router.push('/ticket/confirm');
   };
 
   if (loading) {
@@ -311,18 +353,14 @@ export default function TicketPurchasePage() {
       <section className="min-h-[300px] flex flex-col justify-center px-6 bg-warm-50">
         <div className="max-w-3xl mx-auto w-full">
           <nav className="mb-3">
-            <Link href="/easel-live" className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
-              easel live
-            </Link>
-            <span className="mx-2 text-slate-300">/</span>
-            <Link href="/easel-live/vol2" className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
-              Vol.2
+            <Link href="/" className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
+              Home
             </Link>
             <span className="mx-2 text-slate-300">/</span>
             <span className="text-xs tracking-wider text-slate-500">Ticket</span>
           </nav>
           <div className="text-center">
-            <p className="section-subtitle mb-4">Vol.2</p>
+            <p className="section-subtitle mb-4">Ticket Purchase</p>
             <h1 className="font-serif text-4xl md:text-5xl font-light tracking-[0.2em] text-slate-800">
               チケット購入
             </h1>

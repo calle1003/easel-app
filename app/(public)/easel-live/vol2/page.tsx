@@ -151,7 +151,7 @@ export default async function Vol2DetailPage() {
                 </div>
               </div>
               {representativePerformance.saleStatus === 'ON_SALE' && (
-                <Link href="/easel-live/vol2/ticket" className="btn-primary">
+                <Link href="/ticket" className="btn-primary">
                   チケットを購入する
                 </Link>
               )}
@@ -161,7 +161,7 @@ export default async function Vol2DetailPage() {
               <div className="mb-10">
                 <p className="text-slate-400 mb-6">Coming Soon</p>
               </div>
-              <Link href="/easel-live/vol2/ticket" className="btn-primary">
+              <Link href="/ticket" className="btn-primary">
                 チケットを購入する
               </Link>
             </>

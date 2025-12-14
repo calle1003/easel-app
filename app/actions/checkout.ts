@@ -134,8 +134,8 @@ export async function createCheckoutSession(
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      success_url: `${APP_URL}/easel-live/vol2/ticket/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${APP_URL}/easel-live/vol2/ticket/cancel`,
+      success_url: `${APP_URL}/ticket/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${APP_URL}/ticket/cancel`,
       customer_email: request.customerEmail,
       locale: 'ja',
       payment_method_types: ['card'],
@@ -171,7 +171,7 @@ export async function createCheckoutSession(
       },
     });
 
-    revalidatePath('/easel-live/vol2/ticket');
+    revalidatePath('/ticket');
 
     return {
       success: true,

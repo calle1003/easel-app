@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createCheckoutSession } from '@/app/actions/checkout';
 import Link from 'next/link';
 
 interface OrderData {
   performanceId: number;
+  performanceTitle?: string;
   date: string;
   dateLabel: string;
   hasExchangeCode: boolean;
@@ -25,24 +26,24 @@ interface OrderData {
 
 export default function TicketConfirmPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const data = searchParams.get('data');
-    if (data) {
+    // sessionStorageからデータを取得
+    const savedData = sessionStorage.getItem('orderData');
+    if (savedData) {
       try {
-        const decoded = decodeURIComponent(data);
-        setOrderData(JSON.parse(decoded));
+        setOrderData(JSON.parse(savedData));
       } catch (error) {
         console.error('Failed to parse order data:', error);
-        router.push('/easel-live/vol2/ticket');
+        router.push('/ticket');
       }
     } else {
-      router.push('/easel-live/vol2/ticket');
+      // データがない場合は購入ページにリダイレクト
+      router.push('/ticket');
     }
-  }, [searchParams, router]);
+  }, [router]);
 
   if (!orderData) {
     return (
@@ -70,8 +71,8 @@ export default function TicketConfirmPage() {
   } = orderData;
 
   const handleBack = () => {
-    const encoded = encodeURIComponent(JSON.stringify(orderData));
-    router.push(`/easel-live/vol2/ticket?data=${encoded}`);
+    // sessionStorageにデータが保存されているので、そのまま戻る
+    router.push('/ticket');
   };
 
   const handleCheckout = async () => {
@@ -89,6 +90,8 @@ export default function TicketConfirmPage() {
       });
 
       if (result.success) {
+        // 決済が成功したらsessionStorageをクリア
+        sessionStorage.removeItem('orderData');
         window.location.href = result.data.url;
       } else {
         alert(result.error || '決済セッションの作成に失敗しました');
@@ -107,12 +110,8 @@ export default function TicketConfirmPage() {
       <section className="min-h-[300px] flex flex-col justify-center px-6 bg-warm-50">
         <div className="max-w-3xl mx-auto w-full">
           <nav className="mb-3">
-            <Link href="/easel-live" className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
-              easel live
-            </Link>
-            <span className="mx-2 text-slate-300">/</span>
-            <Link href="/easel-live/vol2" className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
-              Vol.2
+            <Link href="/" className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
+              Home
             </Link>
             <span className="mx-2 text-slate-300">/</span>
             <button onClick={handleBack} className="text-xs tracking-wider text-slate-400 hover:text-slate-600 transition-colors">
@@ -122,7 +121,7 @@ export default function TicketConfirmPage() {
             <span className="text-xs tracking-wider text-slate-500">確認</span>
           </nav>
           <div className="text-center">
-            <p className="section-subtitle mb-4">Vol.2</p>
+            <p className="section-subtitle mb-4">Confirmation</p>
             <h1 className="font-serif text-4xl md:text-5xl font-light tracking-[0.2em] text-slate-800">ご注文内容の確認</h1>
           </div>
         </div>
