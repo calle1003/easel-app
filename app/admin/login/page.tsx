@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (!response.ok || !data.authenticated) {
         throw new Error(data.error || 'ログインに失敗しました');
       }
 
