@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum SaleStatus {
+  NOT_ON_SALE
+  ON_SALE
+  SOLD_OUT
+  ENDED
+}
+
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+enum TicketType {
+  GENERAL
+  RESERVED
+}
+
+model Performance {
+  id                Int       @id @default(autoincrement())
+  title             String
+  volume            String?   @db.VarChar(50)
+  performanceDate   DateTime  @map("performance_date") @db.Date
+  performanceTime   DateTime  @map("performance_time") @db.Time
+  doorsOpenTime     DateTime? @map("doors_open_time") @db.Time
+  venueName         String    @map("venue_name")
+  venueAddress      String?   @map("venue_address")
+  venueAccess       String?   @map("venue_access")
+  generalPrice      Int       @map("general_price")
+  reservedPrice     Int       @map("reserved_price")
+  generalCapacity   Int       @map("general_capacity") @default(0)
+  reservedCapacity  Int       @map("reserved_capacity") @default(0)
+  generalSold       Int       @map("general_sold") @default(0)
+  reservedSold      Int       @map("reserved_sold") @default(0)
+  saleStatus        SaleStatus @map("sale_status") @default(NOT_ON_SALE)
+  saleStartAt       DateTime? @map("sale_start_at")
+  saleEndAt         DateTime? @map("sale_end_at")
+  flyerImageUrl     String?   @map("flyer_image_url")
+  description       String?   @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime? @updatedAt @map("updated_at")
+
+  @@map("performances")
+}
+
+model News {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String?  @db.Text
+  publishedAt DateTime @map("published_at")
+  category    String?
+
+  @@map("news")
+}
+
+model AdminUser {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  password   String
+  name       String
+  role       AdminRole @default(ADMIN)
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastLoginAt DateTime? @map("last_login_at")
+
+  @@map("admin_users")
+}
+
+model ExchangeCode {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique @db.VarChar(50)
+  performerName String?  @map("performer_name") @db.VarChar(100)
+  isUsed       Boolean   @default(false) @map("is_used")
+  usedAt       DateTime? @map("used_at")
+  orderId      Int?      @map("order_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("exchange_codes")
+}
+
+model Order {
+  id                    Int         @id @default(autoincrement())
+  stripeSessionId       String?     @unique @map("stripe_session_id")
+  stripePaymentIntentId String?     @map("stripe_payment_intent_id")
+  performanceDate       String      @map("performance_date") @db.VarChar(50)
+  performanceLabel      String?     @map("performance_label") @db.VarChar(100)
+  generalQuantity       Int         @default(0) @map("general_quantity")
+  reservedQuantity      Int         @default(0) @map("reserved_quantity")
+  generalPrice          Int         @map("general_price")
+  reservedPrice         Int         @map("reserved_price")
+  discountedGeneralCount Int        @default(0) @map("discounted_general_count")
+  discountAmount        Int         @default(0) @map("discount_amount")
+  exchangeCodes         String?     @map("exchange_codes") @db.VarChar(500)
+  totalAmount           Int         @map("total_amount")
+  customerName          String      @map("customer_name") @db.VarChar(100)
+  customerEmail         String      @map("customer_email")
+  customerPhone         String?     @map("customer_phone") @db.VarChar(20)
+  status                OrderStatus @default(PENDING)
+  createdAt             DateTime    @default(now()) @map("created_at")
+  paidAt                DateTime?   @map("paid_at")
+  cancelledAt           DateTime?   @map("cancelled_at")
+
+  tickets               Ticket[]
+
+  @@index([stripeSessionId], name: "idx_order_stripe_session")
+  @@index([status], name: "idx_order_status")
+  @@index([customerEmail], name: "idx_order_customer_email")
+  @@index([performanceDate], name: "idx_order_performance_date")
+  @@map("orders")
+}
+
+model Ticket {
+  id          Int        @id @default(autoincrement())
+  orderId     Int        @map("order_id")
+  ticketCode  String     @unique @map("ticket_code") @db.VarChar(36)
+  ticketType  TicketType @map("ticket_type")
+  isExchanged Boolean    @default(false) @map("is_exchanged")
+  isUsed      Boolean    @default(false) @map("is_used")
+  usedAt      DateTime?  @map("used_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([ticketCode], name: "idx_ticket_code")
+  @@index([orderId], name: "idx_ticket_order")
+  @@index([ticketType], name: "idx_ticket_type")
+  @@map("tickets")
+}
