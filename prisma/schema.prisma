@@ -32,33 +32,69 @@ enum OrderStatus {
 enum TicketType {
   GENERAL
   RESERVED
+  VIP1
+  VIP2
 }
 
 model Performance {
   id                Int       @id @default(autoincrement())
   title             String
   volume            String?   @db.VarChar(50)
+  year              Int?      @map("year")
+  isOnSale          Boolean   @default(false) @map("is_on_sale")
+  generalPrice      Int       @map("general_price")
+  reservedPrice     Int       @map("reserved_price")
+  vip1Price         Int?      @map("vip1_price")
+  vip2Price         Int?      @map("vip2_price")
+  vip1Note          String?   @map("vip1_note") @db.Text
+  vip2Note          String?   @map("vip2_note") @db.Text
+  flyerImages       Json?     @map("flyer_images")
+  description       String?   @db.Text
+  painters          Json?     @map("painters")
+  choreographers    Json?     @map("choreographers")
+  navigators        Json?     @map("navigators")
+  guestDancers      Json?     @map("guest_dancers")
+  staff             Json?     @map("staff")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime? @updatedAt @map("updated_at")
+
+  sessions          PerformanceSession[]
+  performers        PerformancePerformer[]
+
+  @@map("performances")
+}
+
+model PerformanceSession {
+  id                Int       @id @default(autoincrement())
+  performanceId     Int       @map("performance_id")
+  showNumber        Int       @map("show_number")
   performanceDate   DateTime  @map("performance_date") @db.Date
   performanceTime   DateTime  @map("performance_time") @db.Time
   doorsOpenTime     DateTime? @map("doors_open_time") @db.Time
   venueName         String    @map("venue_name")
   venueAddress      String?   @map("venue_address")
   venueAccess       String?   @map("venue_access")
-  generalPrice      Int       @map("general_price")
-  reservedPrice     Int       @map("reserved_price")
   generalCapacity   Int       @map("general_capacity") @default(0)
   reservedCapacity  Int       @map("reserved_capacity") @default(0)
+  vip1Capacity      Int       @map("vip1_capacity") @default(0)
+  vip2Capacity      Int       @map("vip2_capacity") @default(0)
   generalSold       Int       @map("general_sold") @default(0)
   reservedSold      Int       @map("reserved_sold") @default(0)
+  vip1Sold          Int       @map("vip1_sold") @default(0)
+  vip2Sold          Int       @map("vip2_sold") @default(0)
   saleStatus        SaleStatus @map("sale_status") @default(NOT_ON_SALE)
   saleStartAt       DateTime? @map("sale_start_at")
   saleEndAt         DateTime? @map("sale_end_at")
-  flyerImageUrl     String?   @map("flyer_image_url")
-  description       String?   @db.Text
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime? @updatedAt @map("updated_at")
 
-  @@map("performances")
+  performance       Performance    @relation(fields: [performanceId], references: [id], onDelete: Cascade)
+  exchangeCodes     ExchangeCode[]
+
+  @@index([performanceId])
+  @@index([saleStatus])
+  @@index([performanceDate])
+  @@map("performance_sessions")
 }
 
 model News {
@@ -84,14 +120,21 @@ model AdminUser {
 }
 
 model ExchangeCode {
-  id           Int       @id @default(autoincrement())
-  code         String    @unique @db.VarChar(50)
-  performerName String?  @map("performer_name") @db.VarChar(100)
-  isUsed       Boolean   @default(false) @map("is_used")
-  usedAt       DateTime? @map("used_at")
-  orderId      Int?      @map("order_id")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id                   Int       @id @default(autoincrement())
+  code                 String    @unique @db.VarChar(50)
+  performerId          Int?      @map("performer_id")
+  performerName        String?   @map("performer_name") @db.VarChar(100)
+  performanceSessionId Int?      @map("performance_session_id")
+  isUsed               Boolean   @default(false) @map("is_used")
+  usedAt               DateTime? @map("used_at")
+  orderId              Int?      @map("order_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
 
+  performer            Performer?          @relation(fields: [performerId], references: [id])
+  performanceSession   PerformanceSession? @relation(fields: [performanceSessionId], references: [id])
+
+  @@index([performerId])
+  @@index([performanceSessionId])
   @@map("exchange_codes")
 }
 
@@ -103,8 +146,12 @@ model Order {
   performanceLabel      String?     @map("performance_label") @db.VarChar(100)
   generalQuantity       Int         @default(0) @map("general_quantity")
   reservedQuantity      Int         @default(0) @map("reserved_quantity")
+  vip1Quantity          Int         @default(0) @map("vip1_quantity")
+  vip2Quantity          Int         @default(0) @map("vip2_quantity")
   generalPrice          Int         @map("general_price")
   reservedPrice         Int         @map("reserved_price")
+  vip1Price             Int         @default(0) @map("vip1_price")
+  vip2Price             Int         @default(0) @map("vip2_price")
   discountedGeneralCount Int        @default(0) @map("discounted_general_count")
   discountAmount        Int         @default(0) @map("discount_amount")
   exchangeCodes         String?     @map("exchange_codes") @db.VarChar(500)
@@ -142,4 +189,34 @@ model Ticket {
   @@index([orderId], name: "idx_ticket_order")
   @@index([ticketType], name: "idx_ticket_type")
   @@map("tickets")
+}
+
+model Performer {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(100)
+  nameKana      String?   @map("name_kana") @db.VarChar(100)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  performances  PerformancePerformer[]
+  exchangeCodes ExchangeCode[]
+
+  @@map("performers")
+}
+
+model PerformancePerformer {
+  id            Int       @id @default(autoincrement())
+  performanceId Int       @map("performance_id")
+  performerId   Int       @map("performer_id")
+  role          String?   @db.VarChar(50)
+  displayOrder  Int       @default(0) @map("display_order")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  performance   Performance @relation(fields: [performanceId], references: [id], onDelete: Cascade)
+  performer     Performer   @relation(fields: [performerId], references: [id], onDelete: Cascade)
+
+  @@unique([performanceId, performerId])
+  @@index([performanceId])
+  @@index([performerId])
+  @@map("performance_performers")
 }

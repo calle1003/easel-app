@@ -52,26 +52,10 @@ export async function PUT(
       data: {
         title: body.title,
         volume: body.volume,
-        performanceDate: body.performanceDate
-          ? new Date(body.performanceDate)
-          : undefined,
-        performanceTime: body.performanceTime
-          ? new Date(`1970-01-01T${body.performanceTime}`)
-          : undefined,
-        doorsOpenTime: body.doorsOpenTime
-          ? new Date(`1970-01-01T${body.doorsOpenTime}`)
-          : undefined,
-        venueName: body.venueName,
-        venueAddress: body.venueAddress,
-        venueAccess: body.venueAccess,
+        year: body.year || null,
+        isOnSale: body.isOnSale || false,
         generalPrice: body.generalPrice,
         reservedPrice: body.reservedPrice,
-        generalCapacity: body.generalCapacity,
-        reservedCapacity: body.reservedCapacity,
-        saleStatus: body.saleStatus,
-        saleStartAt: body.saleStartAt ? new Date(body.saleStartAt) : undefined,
-        saleEndAt: body.saleEndAt ? new Date(body.saleEndAt) : undefined,
-        flyerImageUrl: body.flyerImageUrl,
         description: body.description,
       },
     });

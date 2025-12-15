@@ -81,6 +81,13 @@ public/easelLiveVol1/**/*.png
 public/easelLiveVol1/**/*.gif
 public/easelLiveVol1/**/*.webp
 
+# --- アップロードされた画像 ---
+public/uploads/*
+!public/uploads/.gitkeep
+!public/uploads/flyers/
+public/uploads/flyers/*
+!public/uploads/flyers/.gitkeep
+
 # --- その他の一時ファイル・バックアップ ---
 *.bak
 *.backup

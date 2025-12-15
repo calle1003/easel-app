@@ -1,25 +1,48 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Image } from 'lucide-react';
+import { Image } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { FlyerCarousel } from '../FlyerCarousel';
 
-const flyers = [
-  { src: '/easelLiveVol1/easel_live_vol1_flyer_IguchiMaiko.jpg', alt: 'Iguchi Maiko', name: '井口舞子' },
-  { src: '/easelLiveVol1/easel_live_vol1_flyer_KikuchiTakumi.jpg', alt: 'Kikuchi Takumi', name: '菊地匠' },
-  { src: '/easelLiveVol1/easel_live_vol1_flyer_MatsumuraSaki.jpg', alt: 'Matsumura Saki', name: '松村咲希' },
-];
+function formatTime(date: Date) {
+  return date.toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
-export default function Vol1DetailPage() {
-  const [currentFlyer, setCurrentFlyer] = useState(0);
-
-  const prevFlyer = () => {
-    setCurrentFlyer((prev) => (prev === 0 ? flyers.length - 1 : prev - 1));
+function formatPerformanceLabel(session: any) {
+  const date = new Date(session.performanceDate);
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+  const weekday = weekdays[date.getDay()];
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const time = formatTime(session.performanceTime);
+  const doorsTime = session.doorsOpenTime ? formatTime(session.doorsOpenTime) : null;
+  
+  return {
+    dateLabel: `${year}/${month}/${day} (${weekday})`,
+    timeLabel: doorsTime 
+      ? `ロビー開場 ${doorsTime.split(':')[0]}:${doorsTime.split(':')[1]} / 開演 ${time}`
+      : `開演 ${time}`,
   };
+}
 
-  const nextFlyer = () => {
-    setCurrentFlyer((prev) => (prev === flyers.length - 1 ? 0 : prev + 1));
-  };
+export default async function Vol1DetailPage() {
+  const performance: any = await prisma.performance.findFirst({
+    where: { volume: 'vol1' },
+    // @ts-ignore
+    include: {
+      sessions: {
+        orderBy: {
+          performanceDate: 'asc',
+        },
+      },
+    },
+  });
+
+  const representativeSession = performance?.sessions?.[0] || null;
+  const flyers = (performance?.flyerImages as any) || [];
 
   return (
     <div>
@@ -34,7 +57,14 @@ export default function Vol1DetailPage() {
             <span className="text-xs tracking-wider text-slate-500">Vol.1</span>
           </nav>
           <div className="text-center">
-            <p className="section-subtitle mb-4">easel live</p>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <p className="section-subtitle">easel live</p>
+              {performance?.isOnSale && (
+                <span className="px-3 py-1 text-xs font-medium tracking-wider text-green-700 bg-green-100 rounded-full">
+                  NOW ON SALE
+                </span>
+              )}
+            </div>
             <h1 className="font-serif text-4xl md:text-5xl font-light tracking-[0.2em] text-slate-800">
               VOL.1
             </h1>
@@ -46,55 +76,7 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-white">
         <div className="max-w-md mx-auto">
           <h2 className="section-title mb-10 text-center">Flyer</h2>
-          
-          <div className="relative">
-            <div className="relative overflow-hidden rounded-lg shadow-lg">
-              {flyers.map((flyer, index) => (
-                <img 
-                  key={index}
-                  src={flyer.src}
-                  alt={flyer.alt}
-                  className={`w-full h-auto transition-all duration-500 ${
-                    index === currentFlyer 
-                      ? 'opacity-100 scale-100 relative' 
-                      : 'opacity-0 scale-95 absolute inset-0'
-                  }`}
-                />
-              ))}
-            </div>
-            
-            <p className="text-center text-sm text-slate-500 mt-6">{flyers[currentFlyer].name}</p>
-            
-            <button
-              onClick={prevFlyer}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 p-2 text-slate-400 hover:text-slate-700 transition-colors"
-              aria-label="前へ"
-            >
-              <ChevronLeft size={32} />
-            </button>
-            <button
-              onClick={nextFlyer}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 p-2 text-slate-400 hover:text-slate-700 transition-colors"
-              aria-label="次へ"
-            >
-              <ChevronRight size={32} />
-            </button>
-            
-            <div className="flex justify-center gap-3 mt-6">
-              {flyers.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentFlyer(index)}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index === currentFlyer 
-                      ? 'bg-slate-700 w-6' 
-                      : 'bg-slate-300 hover:bg-slate-400'
-                  }`}
-                  aria-label={`スライド ${index + 1}`}
-                />
-              ))}
-            </div>
-          </div>
+          <FlyerCarousel flyers={flyers} />
         </div>
       </section>
 
@@ -102,28 +84,29 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-white">
         <div className="max-w-3xl mx-auto">
           <h2 className="section-title mb-10 text-center">Date</h2>
-          
-          <div className="space-y-6">
-            <div className="border-b border-slate-100 pb-6 text-center">
-              <p className="font-serif text-lg text-slate-700 mb-2">2025/5/10 (Sat)</p>
-              <p className="text-sm text-slate-500">
-                ロビー開場 17:00 / 客席開場 17:30 / 開演 17:50
-              </p>
+          {performance?.sessions && performance.sessions.length > 0 ? (
+            <div className="space-y-6">
+              {performance.sessions.map((session: any, index: number) => {
+                const { dateLabel, timeLabel } = formatPerformanceLabel(session);
+                return (
+                  <div
+                    key={session.id}
+                    className={`text-center ${
+                      index < performance.sessions.length - 1 ? 'border-b border-slate-100 pb-6' : ''
+                    }`}
+                  >
+                    <p className="font-serif text-lg text-slate-700 mb-2">{dateLabel}</p>
+                    <p className="text-sm text-slate-500">{timeLabel}</p>
+                  </div>
+                );
+              })}
+              <p className="text-sm text-slate-400 text-center">*全{performance.sessions.length}回公演</p>
             </div>
-            <div className="border-b border-slate-100 pb-6 text-center">
-              <p className="font-serif text-lg text-slate-700 mb-2">2025/5/11 (Sun)</p>
-              <p className="text-sm text-slate-500">
-                ロビー開場 11:00 / 客席開場 11:30 / 開演 12:00
-              </p>
+          ) : (
+            <div className="text-center text-slate-400">
+              <p>Coming Soon</p>
             </div>
-            <div className="border-b border-slate-100 pb-6 text-center">
-              <p className="font-serif text-lg text-slate-700 mb-2">2025/5/11 (Sun)</p>
-              <p className="text-sm text-slate-500">
-                ロビー開場 15:00 / 客席開場 15:30 / 開演 16:00
-              </p>
-            </div>
-            <p className="text-sm text-slate-400 text-center">*全3回公演</p>
-          </div>
+          )}
         </div>
       </section>
 
@@ -131,12 +114,21 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-slate-50/50">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="section-title mb-10">Place</h2>
-          
-          <div>
-            <p className="font-serif text-xl text-slate-700 mb-3">IMAホール</p>
-            <p className="text-slate-500 mb-2">東京都練馬区光が丘5-1-1 光が丘IMA中央館4F</p>
-            <p className="text-sm text-slate-400">最寄り：都営地下鉄大江戸線 光が丘駅</p>
-          </div>
+          {representativeSession ? (
+            <div>
+              <p className="font-serif text-xl text-slate-700 mb-3">{representativeSession.venueName}</p>
+              {representativeSession.venueAddress && (
+                <p className="text-slate-500 mb-2">{representativeSession.venueAddress}</p>
+              )}
+              {representativeSession.venueAccess && (
+                <p className="text-sm text-slate-400">{representativeSession.venueAccess}</p>
+              )}
+            </div>
+          ) : (
+            <div className="text-slate-400">
+              <p>Coming Soon</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -144,17 +136,22 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-white">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="section-title mb-10">Price</h2>
-          
-          <div className="flex justify-center gap-12">
-            <div>
-              <p className="text-slate-500 text-sm mb-2">自由席</p>
-              <p className="font-serif text-2xl text-slate-700">¥4,500</p>
+          {performance ? (
+            <div className="flex justify-center gap-12">
+              <div>
+                <p className="text-slate-500 text-sm mb-2">自由席</p>
+                <p className="font-serif text-2xl text-slate-700">¥{performance.generalPrice.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-slate-500 text-sm mb-2">指定席</p>
+                <p className="font-serif text-2xl text-slate-700">¥{performance.reservedPrice.toLocaleString()}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-slate-500 text-sm mb-2">指定席</p>
-              <p className="font-serif text-2xl text-slate-700">¥5,500</p>
+          ) : (
+            <div className="text-slate-400">
+              <p>Coming Soon</p>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -162,20 +159,29 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-slate-50/50">
         <div className="max-w-3xl mx-auto">
           <h2 className="section-title mb-10 text-center">Painter</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-            <div className="p-6">
-              <p className="font-serif text-lg text-slate-700 mb-1">井口舞子</p>
-              <a href="https://instagram.com/maiko_iguchi" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">@maiko_iguchi</a>
+          {performance?.painters && (performance.painters as any).length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              {(performance.painters as any).map((painter: any, index: number) => (
+                <div key={index} className="p-6">
+                  <p className="font-serif text-lg text-slate-700 mb-1">{painter.name}</p>
+                  {painter.instagram && (
+                    <a
+                      href={`https://instagram.com/${painter.instagram.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {painter.instagram.startsWith('@') ? painter.instagram : `@${painter.instagram}`}
+                    </a>
+                  )}
+                </div>
+              ))}
             </div>
-            <div className="p-6">
-              <p className="font-serif text-lg text-slate-700 mb-1">菊地匠</p>
-              <a href="https://instagram.com/kikuchi_.takumi" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">@kikuchi_.takumi</a>
+          ) : (
+            <div className="text-center text-slate-400">
+              <p>Coming Soon</p>
             </div>
-            <div className="p-6">
-              <p className="font-serif text-lg text-slate-700 mb-1">松村咲希</p>
-              <a href="https://instagram.com/sakimatsumura_" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">@sakimatsumura_</a>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -183,65 +189,35 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-white">
         <div className="max-w-4xl mx-auto">
           <h2 className="section-title mb-10 text-center">Choreographer</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">燦</p>
-              <a href="https://instagram.com/aki_5651" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@aki_5651</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">池上直子</p>
-              <p className="text-xs text-slate-500 mb-1">Dance Marché</p>
-              <a href="https://instagram.com/naoko.ikegami" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@naoko.ikegami</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">伊藤蘭</p>
-              <p className="text-xs text-slate-500 mb-1">Dance Company MKMDC</p>
-              <a href="https://instagram.com/ran_itoh.airamonea" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@ran_itoh.airamonea</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">井上菜々子</p>
-              <a href="https://instagram.com/naaako_02.28" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@naaako_02.28</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">関口佳絵</p>
-              <a href="https://instagram.com/seki_.0._44a" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@seki_.0._44a</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">たむ</p>
-              <a href="https://instagram.com/tamtam0624" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@tamtam0624</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">森政博</p>
-              <a href="https://instagram.com/passosupremori" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@passosupremori</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">DaHLia × Mag</p>
-              <div className="text-xs text-slate-400 space-x-1">
-                <a href="https://instagram.com/yumiho___" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors">@yumiho___</a>
-                <a href="https://instagram.com/___isono" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors">@___isono</a>
-                <a href="https://instagram.com/kami_kke" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors">@kami_kke</a>
-                <a href="https://instagram.com/sugitaaaa_" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors">@sugitaaaa_</a>
+          {performance?.choreographers && (performance.choreographers as any).length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(performance.choreographers as any).map((choreo: any, index: number) => (
+                  <div key={index} className="p-4 text-center">
+                    <p className="font-serif text-slate-700 mb-1">{choreo.name}</p>
+                    {choreo.company && (
+                      <p className="text-xs text-slate-500 mb-1">{choreo.company}</p>
+                    )}
+                    {choreo.instagram && (
+                      <a
+                        href={`https://instagram.com/${choreo.instagram.replace('@', '').split(' ')[0]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {choreo.instagram.startsWith('@') ? choreo.instagram : `@${choreo.instagram}`}
+                      </a>
+                    )}
+                  </div>
+                ))}
               </div>
+              <p className="text-center text-sm text-slate-400 mt-6">*順不同</p>
+            </>
+          ) : (
+            <div className="text-center text-slate-400">
+              <p>Coming Soon</p>
             </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">dayo</p>
-              <a href="https://instagram.com/dayo._.dayo" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@dayo._.dayo</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">Hashimi!i!i!</p>
-              <a href="https://instagram.com/hashim.i.i.i" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@hashim.i.i.i</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">JURI</p>
-              <a href="https://instagram.com/jurrrrii" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@jurrrrii</a>
-            </div>
-            <div className="p-4 text-center">
-              <p className="font-serif text-slate-700 mb-1">miotchery</p>
-              <p className="text-xs text-slate-500 mb-1">Dance Company MKMDC</p>
-              <a href="https://instagram.com/miotchery" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@miotchery</a>
-            </div>
-          </div>
-          <p className="text-center text-sm text-slate-400 mt-6">*順不同</p>
+          )}
         </div>
       </section>
 
@@ -251,14 +227,53 @@ export default function Vol1DetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-center">
             <div>
               <h2 className="text-xs tracking-wider text-slate-400 uppercase mb-6">Navigator</h2>
-              <p className="font-serif text-xl text-slate-700">下田麻美</p>
+              {performance?.navigators && (performance.navigators as any).length > 0 ? (
+                <div className="space-y-4">
+                  {(performance.navigators as any).map((nav: any, index: number) => (
+                    <div key={index}>
+                      <p className="font-serif text-xl text-slate-700 mb-2">{nav.name}</p>
+                      {nav.company && <p className="text-sm text-slate-500 mb-1">{nav.company}</p>}
+                      {nav.instagram && (
+                        <a
+                          href={`https://instagram.com/${nav.instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {nav.instagram.startsWith('@') ? nav.instagram : `@${nav.instagram}`}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400">Coming Soon</p>
+              )}
             </div>
             <div>
               <h2 className="text-xs tracking-wider text-slate-400 uppercase mb-6">Guest Dancer</h2>
-              <p className="font-serif text-xl text-slate-700 mb-2">YOH UENO</p>
-              <p className="text-sm text-slate-500 mb-1">KEMURI</p>
-              <a href="https://instagram.com/yoh_ueno.kemuri" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@yoh_ueno.kemuri</a>
-              <p className="text-xs text-slate-400 mt-3">※5/10 17:50公演のみ出演</p>
+              {performance?.guestDancers && (performance.guestDancers as any).length > 0 ? (
+                <div className="space-y-4">
+                  {(performance.guestDancers as any).map((guest: any, index: number) => (
+                    <div key={index}>
+                      <p className="font-serif text-xl text-slate-700 mb-2">{guest.name}</p>
+                      {guest.company && <p className="text-sm text-slate-500 mb-1">{guest.company}</p>}
+                      {guest.instagram && (
+                        <a
+                          href={`https://instagram.com/${guest.instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {guest.instagram.startsWith('@') ? guest.instagram : `@${guest.instagram}`}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-slate-400">Coming Soon</p>
+              )}
             </div>
           </div>
         </div>
@@ -268,26 +283,53 @@ export default function Vol1DetailPage() {
       <section className="py-20 px-6 bg-white">
         <div className="max-w-3xl mx-auto">
           <h2 className="section-title mb-10 text-center">Staff</h2>
-          <div className="space-y-6 text-center">
-            <div>
-              <p className="text-xs tracking-wider text-slate-400 uppercase mb-2">企画・運営</p>
-              <p className="text-slate-700">easel（岡嶋秀介、古川理奈）</p>
+          {performance?.staff && (performance.staff as any).length > 0 ? (
+            <div className="space-y-6 text-center">
+              {(() => {
+                // 役割と所属でグループ化
+                const grouped = (performance.staff as any).reduce((acc: any, staff: any) => {
+                  const key = `${staff.role}|||${staff.company || ''}`;
+                  if (!acc[key]) {
+                    acc[key] = {
+                      role: staff.role,
+                      company: staff.company,
+                      members: [],
+                    };
+                  }
+                  acc[key].members.push(staff);
+                  return acc;
+                }, {});
+
+                return Object.values(grouped).map((group: any, groupIndex: number) => (
+                  <div key={groupIndex}>
+                    <p className="text-xs tracking-wider text-slate-400 uppercase mb-2">{group.role}</p>
+                    {group.company && <p className="text-sm text-slate-500 mb-3">{group.company}</p>}
+                    <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
+                      {group.members.map((staff: any, staffIndex: number) => (
+                        <div key={staffIndex} className="inline-flex flex-col items-center">
+                          <p className="text-slate-700 mb-1">{staff.name}</p>
+                          {staff.instagram && (
+                            <a
+                              href={`https://instagram.com/${staff.instagram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              {staff.instagram.startsWith('@') ? staff.instagram : `@${staff.instagram}`}
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
-            <div>
-              <p className="text-xs tracking-wider text-slate-400 uppercase mb-2">広報</p>
-              <p className="text-slate-700">関根舞</p>
+          ) : (
+            <div className="text-center text-slate-400">
+              <p>Coming Soon</p>
             </div>
-            <div>
-              <p className="text-xs tracking-wider text-slate-400 uppercase mb-2">デザイン</p>
-              <p className="text-slate-700">Ricky</p>
-              <a href="https://instagram.com/ricky__56" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@ricky__56</a>
-            </div>
-            <div>
-              <p className="text-xs tracking-wider text-slate-400 uppercase mb-2">制作</p>
-              <p className="text-slate-700">株式会社HIDE&SEEK</p>
-              <a href="https://instagram.com/hideandseek2012" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">@hideandseek2012</a>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 

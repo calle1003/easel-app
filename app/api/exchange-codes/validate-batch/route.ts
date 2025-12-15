@@ -14,9 +14,27 @@ export async function POST(request: NextRequest) {
 
     const results = await Promise.all(
       codes.map(async (code: string) => {
-        const normalizedCode = code.trim().toUpperCase();
+        const normalizedCode = code.trim().toLowerCase();
         const exchangeCode = await prisma.exchangeCode.findUnique({
           where: { code: normalizedCode },
+          include: {
+            performanceSession: {
+              select: {
+                id: true,
+                showNumber: true,
+                performanceDate: true,
+                performanceTime: true,
+                venueName: true,
+                performance: {
+                  select: {
+                    id: true,
+                    title: true,
+                    volume: true,
+                  },
+                },
+              },
+            },
+          },
         });
 
         return {
@@ -24,6 +42,7 @@ export async function POST(request: NextRequest) {
           valid: !!exchangeCode,
           used: exchangeCode?.isUsed || false,
           performerName: exchangeCode?.performerName,
+          performanceSession: exchangeCode?.performanceSession || null,
         };
       })
     );

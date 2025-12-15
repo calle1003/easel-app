@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 import Link from 'next/link';
-import { Newspaper, Calendar, Ticket, ShoppingCart, TrendingUp, LogOut, User, Scan } from 'lucide-react';
+import { Newspaper, Calendar, Ticket, ShoppingCart, TrendingUp, LogOut, User, Scan, Users } from 'lucide-react';
 
 interface Stats {
   totalOrders: number;
@@ -59,6 +59,13 @@ export default function AdminDashboardPage() {
       icon: Calendar,
       path: '/admin/performances',
       color: 'bg-purple-500',
+    },
+    {
+      title: '出演者管理',
+      description: '出演者情報の登録・編集・削除',
+      icon: Users,
+      path: '/admin/performers',
+      color: 'bg-cyan-500',
     },
     {
       title: '引換券コード管理',

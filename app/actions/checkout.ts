@@ -11,6 +11,8 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 // Stripe Price IDs (ダッシュボードで作成済み)
 const GENERAL_PRICE_ID = 'price_1SbHIbHrC5XXQaL8fYhk5udi';
 const RESERVED_PRICE_ID = 'price_1SbHHCHrC5XXQaL81l7vjRAq';
+const VIP1_PRICE_ID = process.env.STRIPE_VIP1_PRICE_ID || 'price_1SeaStHrC5XXQaL81kMxdxRX';
+const VIP2_PRICE_ID = process.env.STRIPE_VIP2_PRICE_ID || 'price_1SeaTNHrC5XXQaL8IDxk9BLP';
 
 export async function createCheckoutSession(
   request: CheckoutRequest
@@ -28,7 +30,9 @@ export async function createCheckoutSession(
     }
 
     // 数量チェック
-    const totalQuantity = request.generalQuantity + request.reservedQuantity;
+    const vip1Qty = request.vip1Quantity || 0;
+    const vip2Qty = request.vip2Quantity || 0;
+    const totalQuantity = request.generalQuantity + request.reservedQuantity + vip1Qty + vip2Qty;
     if (totalQuantity <= 0) {
       return { success: false, error: 'チケットを1枚以上選択してください' };
     }
@@ -36,24 +40,29 @@ export async function createCheckoutSession(
       return { success: false, error: '一度に購入できるチケットは10枚までです' };
     }
 
-    // 1. パフォーマンス情報を取得
-    const performance = await prisma.performance.findUnique({
+    // 1. パフォーマンスセッション情報を取得
+    const performanceSession = await prisma.performanceSession.findUnique({
       where: { id: request.performanceId },
+      include: {
+        performance: true,
+      },
     });
 
-    if (!performance) {
+    if (!performanceSession) {
       return { success: false, error: '公演情報が見つかりません' };
     }
 
-    if (performance.saleStatus !== 'ON_SALE') {
+    if (performanceSession.saleStatus !== 'ON_SALE') {
       return { success: false, error: '現在販売中の公演ではありません' };
     }
+
+    const performance = performanceSession.performance;
 
     // 2. 引換券コードの検証
     const validExchangeCodes: string[] = [];
     if (request.exchangeCodes && request.exchangeCodes.length > 0) {
       for (const code of request.exchangeCodes) {
-        const normalizedCode = code.trim().toUpperCase();
+        const normalizedCode = code.trim().toLowerCase();
         const exchangeCode = await prisma.exchangeCode.findFirst({
           where: {
             code: normalizedCode,
@@ -74,9 +83,15 @@ export async function createCheckoutSession(
     const freeGeneralQuantity = Math.min(discountedGeneralCount, request.generalQuantity);
     const chargeableGeneralQuantity = request.generalQuantity - freeGeneralQuantity;
     const discountAmount = freeGeneralQuantity * performance.generalPrice;
+    
+    const vip1Amount = vip1Qty * (performance.vip1Price || 0);
+    const vip2Amount = vip2Qty * (performance.vip2Price || 0);
+    
     const totalAmount =
       chargeableGeneralQuantity * performance.generalPrice +
-      request.reservedQuantity * performance.reservedPrice;
+      request.reservedQuantity * performance.reservedPrice +
+      vip1Amount +
+      vip2Amount;
 
     // 引換券適用数チェック
     if (discountedGeneralCount < 0) {
@@ -120,6 +135,22 @@ export async function createCheckoutSession(
       });
     }
 
+    // VIP①席
+    if (vip1Qty > 0) {
+      lineItems.push({
+        price: VIP1_PRICE_ID,
+        quantity: vip1Qty,
+      });
+    }
+
+    // VIP②席
+    if (vip2Qty > 0) {
+      lineItems.push({
+        price: VIP2_PRICE_ID,
+        quantity: vip2Qty,
+      });
+    }
+
     // 合計金額が0円の場合はエラー（Stripeは0円決済不可）
     if (totalAmount <= 0) {
       return { success: false, error: 'お支払い金額が0円のため、決済は不要です。' };
@@ -130,10 +161,12 @@ export async function createCheckoutSession(
       totalAmount,
       generalQuantity: request.generalQuantity,
       reservedQuantity: request.reservedQuantity,
+      vip1Quantity: vip1Qty,
+      vip2Quantity: vip2Qty,
       exchangeCodes: validExchangeCodes.length,
     });
 
-    const session = await stripe.checkout.sessions.create({
+    const stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: `${APP_URL}/ticket/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${APP_URL}/ticket/cancel`,
@@ -142,10 +175,12 @@ export async function createCheckoutSession(
       payment_method_types: ['card'],
       line_items: lineItems,
       metadata: {
-        performance_date: performance.performanceDate.toISOString().split('T')[0],
+        performance_date: performanceSession.performanceDate.toISOString().split('T')[0],
         customer_name: request.customerName,
         general_quantity: String(request.generalQuantity),
         reserved_quantity: String(request.reservedQuantity),
+        vip1_quantity: String(vip1Qty),
+        vip2_quantity: String(vip2Qty),
         discounted_count: String(freeGeneralQuantity),
         exchange_codes: validExchangeCodes.join(','),
       },
@@ -154,13 +189,17 @@ export async function createCheckoutSession(
     // 5. 注文をDBに保存（ステータス: PENDING）
     const order = await prisma.order.create({
       data: {
-        stripeSessionId: session.id,
-        performanceDate: performance.performanceDate.toISOString().split('T')[0],
+        stripeSessionId: stripeSession.id,
+        performanceDate: performanceSession.performanceDate.toISOString().split('T')[0],
         performanceLabel: request.dateLabel || performance.title,
         generalQuantity: request.generalQuantity,
         reservedQuantity: request.reservedQuantity,
+        vip1Quantity: vip1Qty,
+        vip2Quantity: vip2Qty,
         generalPrice: performance.generalPrice,
         reservedPrice: performance.reservedPrice,
+        vip1Price: performance.vip1Price || 0,
+        vip2Price: performance.vip2Price || 0,
         discountedGeneralCount: freeGeneralQuantity,
         discountAmount: discountAmount,
         totalAmount: totalAmount,
@@ -173,7 +212,7 @@ export async function createCheckoutSession(
     });
 
     logger.success('Checkout session created successfully', {
-      sessionId: session.id,
+      sessionId: stripeSession.id,
       orderId: order.id,
       totalAmount,
     });
@@ -183,8 +222,8 @@ export async function createCheckoutSession(
     return {
       success: true,
       data: {
-        sessionId: session.id,
-        url: session.url || '',
+        sessionId: stripeSession.id,
+        url: stripeSession.url || '',
         orderId: order.id,
       },
     };
@@ -203,7 +242,7 @@ export async function validateExchangeCodes(codes: string[]): Promise<{
 }> {
   const results = await Promise.all(
     codes.map(async (code) => {
-      const normalizedCode = code.trim().toUpperCase();
+      const normalizedCode = code.trim().toLowerCase();
       const exchangeCode = await prisma.exchangeCode.findUnique({
         where: { code: normalizedCode },
       });

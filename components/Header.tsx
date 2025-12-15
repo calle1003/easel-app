@@ -8,8 +8,8 @@ import { Menu, X } from 'lucide-react';
 const navLinks = [
   { path: '/', label: 'TOP' },
   { path: '/about', label: 'ABOUT' },
-  { path: '/easel-live/vol2', label: 'VOL.2' },
-  { path: '/easel-live', label: 'LIVE' },
+  { path: '/easel-live/vol2', label: 'TICKETS' },
+  { path: '/easel-live', label: 'ARCHIVE' },
   { path: '/news', label: 'NEWS' },
   { path: '/goods', label: 'GOODS' },
   { path: '/community', label: 'COMMUNITY' },

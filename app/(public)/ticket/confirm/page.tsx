@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createCheckoutSession } from '@/app/actions/checkout';
 import Link from 'next/link';
+import { AlertCircle } from 'lucide-react';
 
 interface OrderData {
   performanceId: number;
@@ -14,8 +15,12 @@ interface OrderData {
   exchangeCodes: string[];
   generalQuantity: number;
   reservedQuantity: number;
+  vip1Quantity?: number;
+  vip2Quantity?: number;
   generalPrice: number;
   reservedPrice: number;
+  vip1Price?: number;
+  vip2Price?: number;
   discountedGeneralCount: number;
   discountAmount: number;
   total: number;
@@ -60,8 +65,12 @@ export default function TicketConfirmPage() {
     exchangeCodes,
     generalQuantity,
     reservedQuantity,
+    vip1Quantity = 0,
+    vip2Quantity = 0,
     generalPrice,
     reservedPrice,
+    vip1Price = 0,
+    vip2Price = 0,
     discountedGeneralCount,
     discountAmount,
     total,
@@ -82,6 +91,8 @@ export default function TicketConfirmPage() {
         performanceId: orderData.performanceId,
         generalQuantity,
         reservedQuantity,
+        vip1Quantity,
+        vip2Quantity,
         customerName: name,
         customerEmail: email,
         customerPhone: phone,
@@ -236,6 +247,22 @@ export default function TicketConfirmPage() {
                   </span>
                 </div>
               )}
+              {vip1Quantity > 0 && (
+                <div className="flex justify-between text-amber-700">
+                  <span>VIP①席 × {vip1Quantity}</span>
+                  <span>
+                    ¥{(vip1Quantity * vip1Price).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {vip2Quantity > 0 && (
+                <div className="flex justify-between text-purple-700">
+                  <span>VIP②席 × {vip2Quantity}</span>
+                  <span>
+                    ¥{(vip2Quantity * vip2Price).toLocaleString()}
+                  </span>
+                </div>
+              )}
               {discountAmount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>引換券割引（{discountedGeneralCount}枚分）</span>
@@ -253,6 +280,24 @@ export default function TicketConfirmPage() {
                 ¥{total.toLocaleString()}
               </span>
             </div>
+          </div>
+
+          {/* キャンセルポリシー（再確認） */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-8">
+            <h4 className="text-sm font-medium text-amber-900 mb-2 flex items-center gap-2">
+              <AlertCircle size={16} />
+              キャンセルポリシー
+            </h4>
+            <ul className="text-sm text-amber-800 space-y-1.5">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600 mt-0.5">•</span>
+                <span>キャンセル時は決済手数料を差し引いた額をお戻しいたします</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-amber-600 mt-0.5">•</span>
+                <span>本番7日前以降はキャンセル不可となります</span>
+              </li>
+            </ul>
           </div>
 
           {/* Actions */}

@@ -179,6 +179,109 @@ easelに関する最新情報をお届けしてまいります。
     console.log('⏭️  All vol.2 performances already exist, skipping...');
   }
 
+  // 既存の引換券コード（出演者に紐づくもの）を削除
+  console.log('🗑️  Deleting existing exchange codes with performers...');
+  const deletedExchangeCodes = await prisma.exchangeCode.deleteMany({
+    where: {
+      performerId: { not: null },
+    },
+  });
+  console.log(`   Deleted ${deletedExchangeCodes.count} exchange codes`);
+
+  // 既存の出演者-公演の紐付けを削除
+  console.log('🗑️  Deleting existing performance-performer links...');
+  const deletedLinks = await prisma.performancePerformer.deleteMany({});
+  console.log(`   Deleted ${deletedLinks.count} links`);
+
+  // 既存の出演者を削除
+  console.log('🗑️  Deleting existing performers...');
+  const deletedPerformers = await prisma.performer.deleteMany({});
+  console.log(`   Deleted ${deletedPerformers.count} performers`);
+
+  // 出演者を作成
+  console.log('👥 Creating performers...');
+  const performerNames = [
+    { name: '山田太郎', kana: 'やまだたろう' },
+    { name: '佐藤花子', kana: 'さとうはなこ' },
+    { name: '鈴木一郎', kana: 'すずきいちろう' },
+    { name: '高橋美咲', kana: 'たかはしみさき' },
+    { name: '田中健太', kana: 'たなかけんた' },
+    { name: '伊藤あやか', kana: 'いとうあやか' },
+    { name: '渡辺翔太', kana: 'わたなべしょうた' },
+    { name: '中村さくら', kana: 'なかむらさくら' },
+    { name: '小林大輔', kana: 'こばやしだいすけ' },
+    { name: '加藤結衣', kana: 'かとうゆい' },
+  ];
+
+  const performers = [];
+  for (const performerData of performerNames) {
+    const performer = await prisma.performer.create({
+      data: {
+        name: performerData.name,
+        nameKana: performerData.kana,
+      },
+    });
+    performers.push(performer);
+  }
+  console.log(`✅ Created ${performers.length} performers`);
+
+  // 公演を取得
+  const performances = await prisma.performance.findMany();
+  
+  if (performances.length > 0 && performers.length > 0) {
+    // 出演者と公演を関連付け
+    console.log('🔗 Linking performers to performances...');
+    let linkCount = 0;
+    for (let i = 0; i < performers.length; i++) {
+      const performer = performers[i];
+      // 各出演者を1〜3つの公演に割り当て
+      const performanceCount = Math.min(Math.floor(Math.random() * 3) + 1, performances.length);
+      const selectedPerformances = performances
+        .sort(() => Math.random() - 0.5)
+        .slice(0, performanceCount);
+
+      for (let j = 0; j < selectedPerformances.length; j++) {
+        const performance = selectedPerformances[j];
+        await prisma.performancePerformer.create({
+          data: {
+            performanceId: performance.id,
+            performerId: performer.id,
+            displayOrder: j,
+          },
+        });
+        linkCount++;
+      }
+    }
+    console.log(`✅ Created ${linkCount} performance-performer links`);
+  }
+
+  // 引換券コードを作成（各出演者に3件ずつ、合計30件）
+  console.log('🎫 Creating exchange codes...');
+  const exchangeCodesToCreate = [];
+  for (const performer of performers) {
+    for (let i = 0; i < 3; i++) {
+      const timestamp = Date.now() + i;
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const prefix = performer.name.substring(0, 2);
+      const code = `${prefix}${timestamp}${random}`;
+      
+      exchangeCodesToCreate.push({
+        code: code,
+        performerId: performer.id,
+        performerName: performer.name,
+        isUsed: Math.random() > 0.7, // 30%の確率で使用済み
+        usedAt: Math.random() > 0.7 ? new Date() : null,
+      });
+    }
+  }
+
+  await prisma.exchangeCode.createMany({
+    data: exchangeCodesToCreate,
+    skipDuplicates: true,
+  });
+
+  console.log(`✅ Created ${exchangeCodesToCreate.length} exchange codes`)
+
   console.log('🎉 Seeding completed!');
 }
 

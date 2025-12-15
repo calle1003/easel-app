@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
       fullUrl: false,
     },
   },
+  // アップロードファイルサイズ制限を20MBに設定
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '20mb',
+    },
+  },
 };
 
 export default nextConfig;

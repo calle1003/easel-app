@@ -10,7 +10,8 @@ import {
   CheckCircle, 
   Plus,
   Minus,
-  Loader2
+  Loader2,
+  User
 } from 'lucide-react';
 
 interface Performance {
@@ -23,10 +24,31 @@ interface Performance {
   venueName: string;
   generalPrice: number;
   reservedPrice: number;
+  vip1Price: number | null;
+  vip2Price: number | null;
+  vip1Note: string | null;
+  vip2Note: string | null;
   generalCapacity: number;
   generalSold: number;
   reservedCapacity: number;
   reservedSold: number;
+  vip1Capacity: number;
+  vip1Sold: number;
+  vip2Capacity: number;
+  vip2Sold: number;
+}
+
+interface PerformanceSession {
+  id: number;
+  showNumber: number;
+  performanceDate: string;
+  performanceTime: string;
+  venueName: string;
+  performance: {
+    id: number;
+    title: string;
+    volume: string;
+  };
 }
 
 interface CodeValidationResult {
@@ -34,6 +56,7 @@ interface CodeValidationResult {
   valid: boolean;
   used: boolean;
   performerName?: string;
+  performanceSession?: PerformanceSession | null;
 }
 
 export default function TicketPurchasePage() {
@@ -52,6 +75,8 @@ export default function TicketPurchasePage() {
   // チケット枚数
   const [generalQuantity, setGeneralQuantity] = useState(0);
   const [reservedQuantity, setReservedQuantity] = useState(0);
+  const [vip1Quantity, setVip1Quantity] = useState(0);
+  const [vip2Quantity, setVip2Quantity] = useState(0);
 
   // 顧客情報
   const [formData, setFormData] = useState({
@@ -61,6 +86,9 @@ export default function TicketPurchasePage() {
     performanceId: '',
   });
 
+  // キャンセルポリシー同意
+  const [agreedToCancellationPolicy, setAgreedToCancellationPolicy] = useState(false);
+
   // 確認画面から戻ってきた場合、sessionStorageから復元
   useEffect(() => {
     const savedData = sessionStorage.getItem('orderData');
@@ -69,14 +97,20 @@ export default function TicketPurchasePage() {
         const orderData = JSON.parse(savedData);
         setHasExchangeCode(orderData.hasExchangeCode);
         setExchangeCodes(orderData.exchangeCodes.length > 0 ? orderData.exchangeCodes : ['']);
-        setGeneralQuantity(orderData.generalQuantity);
-        setReservedQuantity(orderData.reservedQuantity);
+        setGeneralQuantity(orderData.generalQuantity || 0);
+        setReservedQuantity(orderData.reservedQuantity || 0);
+        setVip1Quantity(orderData.vip1Quantity || 0);
+        setVip2Quantity(orderData.vip2Quantity || 0);
         setFormData({
           name: orderData.name,
           email: orderData.email,
           phone: orderData.phone,
           performanceId: orderData.performanceId.toString(),
         });
+        // キャンセルポリシー同意の復元（デフォルトはtrue）
+        if (orderData.agreedToCancellationPolicy !== undefined) {
+          setAgreedToCancellationPolicy(orderData.agreedToCancellationPolicy);
+        }
       } catch (error) {
         console.error('Failed to restore order data:', error);
       }
@@ -128,8 +162,12 @@ export default function TicketPurchasePage() {
 
   const generalPrice = selectedPerformance?.generalPrice ?? 4500;
   const reservedPrice = selectedPerformance?.reservedPrice ?? 5500;
+  const vip1Price = selectedPerformance?.vip1Price ?? 30000;
+  const vip2Price = selectedPerformance?.vip2Price ?? 8500;
   const generalRemaining = selectedPerformance ? selectedPerformance.generalCapacity - selectedPerformance.generalSold : 0;
   const reservedRemaining = selectedPerformance ? selectedPerformance.reservedCapacity - selectedPerformance.reservedSold : 0;
+  const vip1Remaining = selectedPerformance ? selectedPerformance.vip1Capacity - selectedPerformance.vip1Sold : 0;
+  const vip2Remaining = selectedPerformance ? selectedPerformance.vip2Capacity - selectedPerformance.vip2Sold : 0;
 
   const validCodeCount = useMemo(
     () => codeValidations.filter((v) => v.valid && !v.used).length,
@@ -143,13 +181,21 @@ export default function TicketPurchasePage() {
   const calculations = useMemo(() => {
     const generalTotal = (generalQuantity - discountedGeneralCount) * generalPrice;
     const reservedTotal = reservedQuantity * reservedPrice;
-    const total = generalTotal + reservedTotal;
+    const vip1Total = vip1Quantity * vip1Price;
+    const vip2Total = vip2Quantity * vip2Price;
+    const total = generalTotal + reservedTotal + vip1Total + vip2Total;
     const discountAmount = discountedGeneralCount * generalPrice;
 
-    return { generalTotal, reservedTotal, total, discountAmount };
-  }, [generalQuantity, reservedQuantity, discountedGeneralCount, generalPrice, reservedPrice]);
+    return { generalTotal, reservedTotal, vip1Total, vip2Total, total, discountAmount };
+  }, [generalQuantity, reservedQuantity, vip1Quantity, vip2Quantity, discountedGeneralCount, generalPrice, reservedPrice, vip1Price, vip2Price]);
 
-  const totalQuantity = generalQuantity + reservedQuantity;
+  const totalQuantity = generalQuantity + reservedQuantity + vip1Quantity + vip2Quantity;
+
+  const hasDuplicateCodes = useMemo(() => {
+    if (!hasExchangeCode) return false;
+    const nonEmptyCodes = exchangeCodes.filter(c => c.trim() !== '').map(c => c.toLowerCase());
+    return new Set(nonEmptyCodes).size !== nonEmptyCodes.length;
+  }, [exchangeCodes, hasExchangeCode]);
 
   const isExchangeCodeValid =
     hasExchangeCode === false ||
@@ -157,7 +203,8 @@ export default function TicketPurchasePage() {
       exchangeCodes.length > 0 &&
       exchangeCodes.every((code) => code.trim() !== '') &&
       codeValidations.length > 0 &&
-      codeValidations.every((v) => v.valid && !v.used));
+      codeValidations.every((v) => v.valid && !v.used) &&
+      !hasDuplicateCodes);
 
   const isFormValid =
     formData.performanceId &&
@@ -166,7 +213,8 @@ export default function TicketPurchasePage() {
     formData.phone.trim() &&
     hasExchangeCode !== null &&
     isExchangeCodeValid &&
-    totalQuantity > 0;
+    totalQuantity > 0 &&
+    agreedToCancellationPolicy;
 
   const handlePerformanceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
@@ -182,13 +230,19 @@ export default function TicketPurchasePage() {
     }
   };
 
-  const handleQuantityChange = (type: 'general' | 'reserved', delta: number) => {
+  const handleQuantityChange = (type: 'general' | 'reserved' | 'vip1' | 'vip2', delta: number) => {
     if (type === 'general') {
       const max = Math.min(generalRemaining, 10);
       setGeneralQuantity((prev) => Math.max(0, Math.min(max, prev + delta)));
-    } else {
+    } else if (type === 'reserved') {
       const max = Math.min(reservedRemaining, 10);
       setReservedQuantity((prev) => Math.max(0, Math.min(max, prev + delta)));
+    } else if (type === 'vip1') {
+      const max = Math.min(vip1Remaining, 10);
+      setVip1Quantity((prev) => Math.max(0, Math.min(max, prev + delta)));
+    } else if (type === 'vip2') {
+      const max = Math.min(vip2Remaining, 10);
+      setVip2Quantity((prev) => Math.max(0, Math.min(max, prev + delta)));
     }
   };
 
@@ -215,7 +269,7 @@ export default function TicketPurchasePage() {
   const handleCodeChange = (index: number, value: string) => {
     setExchangeCodes((prev) => {
       const newCodes = [...prev];
-      newCodes[index] = value.toUpperCase();
+      newCodes[index] = value.toLowerCase();
       return newCodes;
     });
     setCodeValidations([]);
@@ -278,7 +332,14 @@ export default function TicketPurchasePage() {
   }, [exchangeCodes, hasExchangeCode]);
 
   const getCodeValidation = (code: string): CodeValidationResult | undefined => {
-    return codeValidations.find((v) => v.code.toUpperCase() === code.toUpperCase());
+    return codeValidations.find((v) => v.code.toLowerCase() === code.toLowerCase());
+  };
+
+  const isDuplicateCode = (code: string, currentIndex: number): boolean => {
+    if (!code.trim()) return false;
+    return exchangeCodes.some(
+      (c, index) => index !== currentIndex && c.trim().toLowerCase() === code.trim().toLowerCase()
+    );
   };
 
   const formatPerformanceLabel = (perf: Performance): string => {
@@ -307,14 +368,19 @@ export default function TicketPurchasePage() {
       exchangeCodes: hasExchangeCode ? exchangeCodes.filter((c) => c.trim() !== '') : [],
       generalQuantity,
       reservedQuantity,
+      vip1Quantity,
+      vip2Quantity,
       generalPrice,
       reservedPrice,
+      vip1Price,
+      vip2Price,
       discountedGeneralCount,
       discountAmount: calculations.discountAmount,
       total: calculations.total,
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
+      agreedToCancellationPolicy,
     };
 
     // sessionStorageにデータを保存
@@ -401,10 +467,22 @@ export default function TicketPurchasePage() {
                   <p className="text-sm text-slate-600">
                     📍 {selectedPerformance.venueName}
                   </p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    残席: 一般席 <span className="font-medium text-slate-700">{generalRemaining}</span>枚 / 
-                    指定席 <span className="font-medium text-slate-700">{reservedRemaining}</span>枚
-                  </p>
+                  <div className="text-sm text-slate-500 mt-1 space-y-1">
+                    <p>
+                      残席: 一般席 <span className="font-medium text-slate-700">{generalRemaining}</span>枚 / 
+                      指定席 <span className="font-medium text-slate-700">{reservedRemaining}</span>枚
+                    </p>
+                    {(selectedPerformance.vip1Price && vip1Remaining > 0) && (
+                      <p className="text-amber-700">
+                        VIP①席 <span className="font-medium">{vip1Remaining}</span>枚
+                      </p>
+                    )}
+                    {(selectedPerformance.vip2Price && vip2Remaining > 0) && (
+                      <p className="text-purple-700">
+                        VIP②席 <span className="font-medium">{vip2Remaining}</span>枚
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </section>
@@ -451,6 +529,9 @@ export default function TicketPurchasePage() {
                     </p>
                     {exchangeCodes.map((code, index) => {
                       const validation = getCodeValidation(code);
+                      const isDuplicate = isDuplicateCode(code, index);
+                      const hasError = (validation && (!validation.valid || validation.used)) || isDuplicate;
+                      
                       return (
                         <div key={index}>
                           <div className="flex gap-3">
@@ -461,16 +542,16 @@ export default function TicketPurchasePage() {
                                 onChange={(e) => handleCodeChange(index, e.target.value)}
                                 placeholder={`引換券コード ${index + 1}`}
                                 className={`w-full p-4 pr-12 border rounded-lg focus:outline-none transition-all ${
-                                  validation
-                                    ? validation.valid && !validation.used
+                                  hasError
+                                    ? 'border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100'
+                                    : validation && validation.valid && !validation.used
                                       ? 'border-green-400 bg-green-50 focus:ring-2 focus:ring-green-100'
-                                      : 'border-red-400 bg-red-50 focus:ring-2 focus:ring-red-100'
-                                    : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-100'
+                                      : 'border-slate-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-100'
                                 }`}
                               />
-                              {validation && (
+                              {(validation || isDuplicate) && (
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                  {validation.valid && !validation.used ? (
+                                  {validation && validation.valid && !validation.used && !isDuplicate ? (
                                     <CheckCircle size={20} className="text-green-500" />
                                   ) : (
                                     <AlertCircle size={20} className="text-red-500" />
@@ -488,14 +569,44 @@ export default function TicketPurchasePage() {
                               </button>
                             )}
                           </div>
-                          {validation && (
-                            <p className={`mt-2 text-sm ${validation.valid && !validation.used ? 'text-green-600' : 'text-red-500'}`}>
-                              {validation.valid && !validation.used ? '✓ ' : '✗ '}
-                              {validation.used ? 'このコードは既に使用済みです' : validation.valid ? '有効なコードです' : '無効なコードです'}
-                              {validation.performerName && (
-                                <span className="font-medium"> ({validation.performerName}扱い)</span>
+                          {isDuplicate && (
+                            <div className="mt-2">
+                              <p className="text-sm text-red-500">
+                                ✗ このコードは既に入力されています
+                              </p>
+                            </div>
+                          )}
+                          {!isDuplicate && validation && (
+                            <div className="mt-2 space-y-2">
+                              <p className={`text-sm ${validation.valid && !validation.used ? 'text-green-600' : 'text-red-500'}`}>
+                                {validation.valid && !validation.used ? '✓ ' : '✗ '}
+                                {validation.used ? 'このコードは既に使用済みです' : validation.valid ? '有効なコードです' : '無効なコードです'}
+                              </p>
+                              {validation.performerName && validation.valid && !validation.used && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                  <User size={16} className="text-green-600" />
+                                  <span className="text-sm text-green-700">
+                                    出演者: <span className="font-semibold">{validation.performerName}</span>
+                                  </span>
+                                </div>
                               )}
-                            </p>
+                              {validation.performanceSession && validation.valid && !validation.used && (
+                                <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                                  <div className="text-xs text-blue-600 mb-1">対象公演</div>
+                                  <div className="text-sm text-blue-700">
+                                    <span className="font-semibold">{validation.performanceSession.performance.title}</span>
+                                    {' - '}
+                                    <span className="font-medium">
+                                      {['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'][validation.performanceSession.showNumber - 1] || `${validation.performanceSession.showNumber}th`}
+                                    </span>
+                                    {' '}
+                                    <span className="text-xs">
+                                      ({new Date(validation.performanceSession.performanceDate).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })})
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       );
@@ -587,6 +698,92 @@ export default function TicketPurchasePage() {
                     </button>
                   </div>
                 </div>
+
+                {/* VIP① */}
+                {selectedPerformance?.vip1Price && vip1Remaining > 0 && (
+                  <div className="border border-amber-200 rounded-lg overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50">
+                    <div className="flex items-center justify-between p-5">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-slate-700 font-medium">VIP①席</p>
+                          <span className="px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded">特典付き</span>
+                        </div>
+                        <p className="text-sm text-amber-700 mt-1">
+                          ¥{vip1Price.toLocaleString()} / 枚
+                        </p>
+                        {selectedPerformance.vip1Note && (
+                          <p className="text-xs text-amber-600 mt-2">
+                            {selectedPerformance.vip1Note}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => handleQuantityChange('vip1', -1)}
+                          disabled={vip1Quantity === 0 || !selectedPerformance}
+                          className="p-2 border border-amber-300 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Minus size={16} className="text-amber-700" />
+                        </button>
+                        <span className="w-8 text-center text-lg text-amber-800 font-medium">
+                          {vip1Quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuantityChange('vip1', 1)}
+                          disabled={!selectedPerformance || vip1Quantity >= Math.min(vip1Remaining, 10)}
+                          className="p-2 border border-amber-300 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus size={16} className="text-amber-700" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* VIP② */}
+                {selectedPerformance?.vip2Price && vip2Remaining > 0 && (
+                  <div className="border border-purple-200 rounded-lg overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50">
+                    <div className="flex items-center justify-between p-5">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-slate-700 font-medium">VIP②席</p>
+                          <span className="px-2 py-0.5 text-xs font-medium text-purple-700 bg-purple-100 rounded">特典付き</span>
+                        </div>
+                        <p className="text-sm text-purple-700 mt-1">
+                          ¥{vip2Price.toLocaleString()} / 枚
+                        </p>
+                        {selectedPerformance.vip2Note && (
+                          <p className="text-xs text-purple-600 mt-2">
+                            {selectedPerformance.vip2Note}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => handleQuantityChange('vip2', -1)}
+                          disabled={vip2Quantity === 0 || !selectedPerformance}
+                          className="p-2 border border-purple-300 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Minus size={16} className="text-purple-700" />
+                        </button>
+                        <span className="w-8 text-center text-lg text-purple-800 font-medium">
+                          {vip2Quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuantityChange('vip2', 1)}
+                          disabled={!selectedPerformance || vip2Quantity >= Math.min(vip2Remaining, 10)}
+                          className="p-2 border border-purple-300 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus size={16} className="text-purple-700" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -654,6 +851,18 @@ export default function TicketPurchasePage() {
                     <span>¥{calculations.reservedTotal.toLocaleString()}</span>
                   </div>
                 )}
+                {vip1Quantity > 0 && (
+                  <div className="flex items-center justify-between text-amber-700">
+                    <span>VIP①席 × {vip1Quantity}</span>
+                    <span>¥{calculations.vip1Total.toLocaleString()}</span>
+                  </div>
+                )}
+                {vip2Quantity > 0 && (
+                  <div className="flex items-center justify-between text-purple-700">
+                    <span>VIP②席 × {vip2Quantity}</span>
+                    <span>¥{calculations.vip2Total.toLocaleString()}</span>
+                  </div>
+                )}
                 {calculations.discountAmount > 0 && (
                   <div className="flex items-center justify-between text-green-600">
                     <span>🎫 引換券割引（{discountedGeneralCount}枚分）</span>
@@ -668,12 +877,41 @@ export default function TicketPurchasePage() {
                 </div>
               </div>
 
+              {/* キャンセルポリシー */}
+              <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h4 className="text-sm font-medium text-amber-900 mb-2 flex items-center gap-2">
+                  <AlertCircle size={16} />
+                  キャンセルポリシー
+                </h4>
+                <ul className="text-sm text-amber-800 space-y-1.5 mb-3 ml-1">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>キャンセル時は決済手数料を差し引いた額をお戻しいたします</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>本番7日前以降はキャンセル不可となります</span>
+                  </li>
+                </ul>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={agreedToCancellationPolicy}
+                    onChange={(e) => setAgreedToCancellationPolicy(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-amber-600 border-amber-300 rounded focus:ring-amber-500 focus:ring-offset-0 cursor-pointer"
+                  />
+                  <span className="text-sm text-amber-900 select-none">
+                    キャンセルポリシーに同意します
+                  </span>
+                </label>
+              </div>
+
               {/* アクションボタン */}
               <button
                 type="button"
                 onClick={handleGoToConfirm}
                 disabled={!isFormValid}
-                className={`btn-primary w-full justify-center ${
+                className={`mt-8 btn-primary w-full justify-center ${
                   !isFormValid ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >

@@ -87,6 +87,22 @@ export async function POST(request: NextRequest) {
           isExchanged: false,
         });
       }
+      for (let i = 0; i < order.vip1Quantity; i++) {
+        tickets.push({
+          orderId: order.id,
+          ticketCode: crypto.randomUUID(),
+          ticketType: 'VIP1' as const,
+          isExchanged: false,
+        });
+      }
+      for (let i = 0; i < order.vip2Quantity; i++) {
+        tickets.push({
+          orderId: order.id,
+          ticketCode: crypto.randomUUID(),
+          ticketType: 'VIP2' as const,
+          isExchanged: false,
+        });
+      }
 
       await prisma.ticket.createMany({ data: tickets });
 
