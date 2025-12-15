@@ -85,8 +85,8 @@ public/easelLiveVol1/**/*.webp
 *.bak
 *.backup
 *.old
-frontend.old/
-backend.old/
+.frontend.old/
+.backend.old/
 
 # --- セキュリティ関連 ---
 *.pem
