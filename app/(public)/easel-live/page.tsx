@@ -3,19 +3,26 @@ import { ArrowRight } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 
 export default async function EaselLiveTopPage() {
-  // 全ての公演を取得（年度の降順）
+  // 全ての公演を取得（最初のセッション日付の降順）
   const performances = await prisma.performance.findMany({
     select: {
       id: true,
       title: true,
       volume: true,
-      year: true,
       isOnSale: true,
+      sessions: {
+        select: {
+          performanceDate: true,
+        },
+        orderBy: {
+          performanceDate: 'asc',
+        },
+        take: 1,
+      },
     },
-    orderBy: [
-      { year: 'desc' },
-      { volume: 'desc' },
-    ],
+    orderBy: {
+      createdAt: 'desc',
+    },
   });
 
   return (
@@ -57,34 +64,39 @@ export default async function EaselLiveTopPage() {
           
           {performances.length > 0 ? (
             <div className="space-y-6">
-              {performances.map((performance) => (
-                <Link
-                  key={performance.id}
-                  href={`/easel-live/${performance.volume?.replace('.', '')}`}
-                  className="group block p-8 bg-white border border-slate-100 rounded-xl hover:border-slate-200 transition-all duration-300"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs tracking-wider text-slate-400 mb-2">
-                        {performance.year || '----'}
-                      </p>
-                      <h3 className="font-serif text-2xl tracking-wider text-slate-700 mb-2">
-                        {performance.volume ? `Vol.${performance.volume.replace('vol', '')}` : performance.title}
-                      </h3>
+              {performances.map((performance) => {
+                const firstSessionDate = performance.sessions[0]?.performanceDate;
+                const year = firstSessionDate ? new Date(firstSessionDate).getFullYear() : '----';
+                
+                return (
+                  <Link
+                    key={performance.id}
+                    href={`/easel-live/${performance.volume?.replace('.', '')}`}
+                    className="group block p-8 bg-white border border-slate-100 rounded-xl hover:border-slate-200 transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs tracking-wider text-slate-400 mb-2">
+                          {year}
+                        </p>
+                        <h3 className="font-serif text-2xl tracking-wider text-slate-700 mb-2">
+                          {performance.volume ? `Vol.${performance.volume.replace('vol', '')}` : performance.title}
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm transition-colors duration-300">
+                        <span className={`tracking-wider font-medium ${
+                          performance.isOnSale 
+                            ? 'text-green-600 group-hover:text-green-700' 
+                            : 'text-slate-400 group-hover:text-slate-700'
+                        }`}>
+                          {performance.isOnSale ? 'NOW ON SALE' : 'ARCHIVE'}
+                        </span>
+                        <ArrowRight size={16} className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-1 transition-all duration-300" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm transition-colors duration-300">
-                      <span className={`tracking-wider font-medium ${
-                        performance.isOnSale 
-                          ? 'text-green-600 group-hover:text-green-700' 
-                          : 'text-slate-400 group-hover:text-slate-700'
-                      }`}>
-                        {performance.isOnSale ? 'NOW ON SALE' : 'ARCHIVE'}
-                      </span>
-                      <ArrowRight size={16} className="text-slate-400 group-hover:text-slate-700 group-hover:translate-x-1 transition-all duration-300" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center text-slate-400">

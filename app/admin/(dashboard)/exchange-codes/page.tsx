@@ -929,7 +929,7 @@ export default function AdminExchangeCodesPage() {
           resetBatchModal();
         }}
         title="コードを一括生成"
-        size="xl"
+        size="lg"
       >
         <form onSubmit={handleBatchGenerate} className="space-y-4">
           <div className="relative modal-dropdown">

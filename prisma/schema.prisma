@@ -40,7 +40,6 @@ model Performance {
   id                Int       @id @default(autoincrement())
   title             String
   volume            String?   @db.VarChar(50)
-  year              Int?      @map("year")
   isOnSale          Boolean   @default(false) @map("is_on_sale")
   generalPrice      Int       @map("general_price")
   reservedPrice     Int       @map("reserved_price")

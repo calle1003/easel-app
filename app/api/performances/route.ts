@@ -83,7 +83,6 @@ export async function POST(request: Request) {
       data: {
         title: body.title,
         volume: body.volume,
-        year: body.year || null,
         isOnSale: body.isOnSale || false,
         generalPrice: body.generalPrice,
         reservedPrice: body.reservedPrice,

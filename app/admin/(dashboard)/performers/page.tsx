@@ -627,7 +627,7 @@ export default function AdminPerformersPage() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         title={editingId ? '出演者を編集' : '新規出演者登録'}
-        size="xl"
+        size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -796,7 +796,7 @@ export default function AdminPerformersPage() {
           resetBatchModal();
         }}
         title="CSV一括登録"
-        size="xl"
+        size="lg"
       >
         <div className="space-y-4">
           {/* CSV形式の説明 */}
