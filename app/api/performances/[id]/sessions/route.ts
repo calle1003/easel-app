@@ -28,6 +28,8 @@ export async function POST(
         venueAccess: body.venueAccess,
         generalCapacity: body.generalCapacity || 0,
         reservedCapacity: body.reservedCapacity || 0,
+        vip1Capacity: body.vip1Capacity || 0,
+        vip2Capacity: body.vip2Capacity || 0,
         saleStatus: body.saleStatus || 'NOT_ON_SALE',
         saleStartAt: body.saleStartAt ? new Date(body.saleStartAt) : null,
         saleEndAt: body.saleEndAt ? new Date(body.saleEndAt) : null,

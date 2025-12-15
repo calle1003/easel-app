@@ -56,6 +56,10 @@ export async function PUT(
         isOnSale: body.isOnSale || false,
         generalPrice: body.generalPrice,
         reservedPrice: body.reservedPrice,
+        vip1Price: body.vip1Price || null,
+        vip2Price: body.vip2Price || null,
+        vip1Note: body.vip1Note || null,
+        vip2Note: body.vip2Note || null,
         description: body.description,
       },
     });

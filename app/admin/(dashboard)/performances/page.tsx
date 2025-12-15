@@ -33,6 +33,10 @@ interface Performance {
   isOnSale?: boolean;
   generalPrice: number;
   reservedPrice: number;
+  vip1Price: number | null;
+  vip2Price: number | null;
+  vip1Note: string | null;
+  vip2Note: string | null;
   flyerImages?: Array<{ url: string; name: string }>;
   description: string | null;
   painters?: Array<{ name: string; instagram?: string }>;
@@ -66,6 +70,10 @@ export default function AdminPerformancesPage() {
     venueAccess: '',
     generalPrice: 4500,
     reservedPrice: 5500,
+    vip1Price: 0,
+    vip2Price: 0,
+    vip1Note: '',
+    vip2Note: '',
     description: '',
   });
 
@@ -99,6 +107,8 @@ export default function AdminPerformancesPage() {
     venueAccess: '',
     generalCapacity: 100,
     reservedCapacity: 30,
+    vip1Capacity: 0,
+    vip2Capacity: 0,
   });
 
   useEffect(() => {
@@ -147,6 +157,10 @@ export default function AdminPerformancesPage() {
       venueAccess: '',
       generalPrice: 4500,
       reservedPrice: 5500,
+      vip1Price: 0,
+      vip2Price: 0,
+      vip1Note: '',
+      vip2Note: '',
       description: '',
     });
     setSessionsDatesData([
@@ -171,6 +185,10 @@ export default function AdminPerformancesPage() {
       venueAccess: firstSession?.venueAccess || '',
       generalPrice: perf.generalPrice,
       reservedPrice: perf.reservedPrice,
+      vip1Price: perf.vip1Price || 0,
+      vip2Price: perf.vip2Price || 0,
+      vip1Note: perf.vip1Note || '',
+      vip2Note: perf.vip2Note || '',
       description: perf.description || '',
     });
     setIsPerformanceModalOpen(true);
@@ -222,6 +240,8 @@ export default function AdminPerformancesPage() {
       venueAccess: '',
       generalCapacity: 100,
       reservedCapacity: 30,
+      vip1Capacity: 0,
+      vip2Capacity: 0,
     });
     setIsSessionModalOpen(true);
   };
@@ -249,6 +269,8 @@ export default function AdminPerformancesPage() {
       venueAccess: session.venueAccess || '',
       generalCapacity: session.generalCapacity,
       reservedCapacity: session.reservedCapacity,
+      vip1Capacity: session.vip1Capacity || 0,
+      vip2Capacity: session.vip2Capacity || 0,
     });
     setIsSessionModalOpen(true);
   };
@@ -663,6 +685,56 @@ export default function AdminPerformancesPage() {
               />
             </div>
           </div>
+          
+          {/* VIP席料金 */}
+          <div className="border-t border-slate-200 pt-4 mt-2">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">VIP席（オプション）</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">VIP①席料金</label>
+                <input
+                  type="number"
+                  value={performanceFormData.vip1Price}
+                  onChange={(e) => setPerformanceFormData({ ...performanceFormData, vip1Price: parseInt(e.target.value, 10) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+                  placeholder="30000"
+                />
+                <p className="text-xs text-slate-500 mt-1">0円の場合は非表示</p>
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">VIP②席料金</label>
+                <input
+                  type="number"
+                  value={performanceFormData.vip2Price}
+                  onChange={(e) => setPerformanceFormData({ ...performanceFormData, vip2Price: parseInt(e.target.value, 10) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+                  placeholder="8500"
+                />
+                <p className="text-xs text-slate-500 mt-1">0円の場合は非表示</p>
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="block text-sm text-slate-600 mb-1">VIP①席 特典・備考</label>
+              <input
+                type="text"
+                value={performanceFormData.vip1Note}
+                onChange={(e) => setPerformanceFormData({ ...performanceFormData, vip1Note: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+                placeholder="オリジナルグッズ特典付き"
+              />
+            </div>
+            <div className="mt-3">
+              <label className="block text-sm text-slate-600 mb-1">VIP②席 特典・備考</label>
+              <input
+                type="text"
+                value={performanceFormData.vip2Note}
+                onChange={(e) => setPerformanceFormData({ ...performanceFormData, vip2Note: e.target.value })}
+                className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+                placeholder="グッズ割引券付き"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm text-slate-600 mb-1">会場名</label>
             <input
@@ -861,6 +933,34 @@ export default function AdminPerformancesPage() {
               />
             </div>
           </div>
+          
+          {/* VIP席数 */}
+          <div className="border-t border-slate-200 pt-4 mt-2">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">VIP席在庫（オプション）</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">VIP①席数</label>
+                <input
+                  type="number"
+                  value={sessionFormData.vip1Capacity}
+                  onChange={(e) => setSessionFormData({ ...sessionFormData, vip1Capacity: parseInt(e.target.value, 10) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-600 mb-1">VIP②席数</label>
+                <input
+                  type="number"
+                  value={sessionFormData.vip2Capacity}
+                  onChange={(e) => setSessionFormData({ ...sessionFormData, vip2Capacity: parseInt(e.target.value, 10) || 0 })}
+                  className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          </div>
+          
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"

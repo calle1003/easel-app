@@ -33,6 +33,8 @@ export async function PUT(
         venueAccess: body.venueAccess,
         generalCapacity: body.generalCapacity,
         reservedCapacity: body.reservedCapacity,
+        vip1Capacity: body.vip1Capacity !== undefined ? body.vip1Capacity : undefined,
+        vip2Capacity: body.vip2Capacity !== undefined ? body.vip2Capacity : undefined,
         saleStatus: body.saleStatus,
         saleStartAt: body.saleStartAt ? new Date(body.saleStartAt) : undefined,
         saleEndAt: body.saleEndAt ? new Date(body.saleEndAt) : undefined,
