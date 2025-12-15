@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Camera, 
   X, 
@@ -40,6 +41,7 @@ type ScanStatus = 'idle' | 'scanning' | 'verified' | 'success' | 'error' | 'alre
 
 export default function AdminCheckInPage() {
   const { adminFetch } = useAdminUser();
+  const router = useRouter();
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
   const [ticketInfo, setTicketInfo] = useState<TicketInfo | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -68,6 +70,37 @@ export default function AdminCheckInPage() {
       stopCamera();
     };
   }, [isManualMode]);
+
+  // ページを離れるときやタブが非表示になるときにカメラを停止
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('Page hidden, stopping camera');
+        stopCamera();
+      } else if (!isManualMode && scanStatus === 'idle') {
+        console.log('Page visible, restarting camera');
+        startCamera();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      console.log('Page unloading, stopping camera');
+      stopCamera();
+    };
+
+    // イベントリスナーを追加
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    return () => {
+      // クリーンアップ
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      stopCamera();
+    };
+  }, [isManualMode, scanStatus]);
 
   const fetchStats = async () => {
     try {
@@ -222,15 +255,26 @@ export default function AdminCheckInPage() {
   };
 
   const stopCamera = () => {
-    if (codeReaderRef.current) {
-      codeReaderRef.current = null;
-    }
+    console.log('Stopping camera...');
+    
     // ビデオ要素のストリームを停止
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind, track.label);
+        track.stop();
+      });
       videoRef.current.srcObject = null;
+      console.log('Video stream stopped');
     }
+    
+    // QRCodeReaderの参照をクリア
+    if (codeReaderRef.current) {
+      codeReaderRef.current = null;
+      console.log('QRCodeReader reference cleared');
+    }
+    
+    setIsCameraReady(false);
   };
 
   const handleScan = async (ticketCode: string) => {
@@ -441,10 +485,16 @@ export default function AdminCheckInPage() {
     <div className="min-h-screen bg-slate-900 text-white">
       {/* Header */}
       <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
-        <Link href="/admin" className="flex items-center gap-2 text-slate-300 hover:text-white">
+        <button 
+          onClick={() => {
+            stopCamera();
+            router.push('/admin');
+          }}
+          className="flex items-center gap-2 text-slate-300 hover:text-white"
+        >
           <ArrowLeft size={20} />
           <span className="text-sm">戻る</span>
-        </Link>
+        </button>
         <h1 className="text-lg font-medium">入場チェック</h1>
         <button
           onClick={() => setIsManualMode(!isManualMode)}

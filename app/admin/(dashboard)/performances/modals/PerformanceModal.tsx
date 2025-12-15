@@ -195,7 +195,7 @@ export function PerformanceModal({
                 value={performanceFormData.venueName}
                 onChange={(e) => setPerformanceFormData({ ...performanceFormData, venueName: e.target.value })}
                 className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
-                placeholder="渋谷CLUB QUATTRO"
+                placeholder="埼玉会館"
                 required={!editingPerformanceId}
               />
               {!editingPerformanceId && (
