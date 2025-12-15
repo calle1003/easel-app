@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { sendPurchaseConfirmationEmail } from '@/lib/email';
+import { logger } from '@/lib/logger';
 import Stripe from 'stripe';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -14,8 +15,9 @@ export async function POST(request: NextRequest) {
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    logger.stripe(event.type, 'received');
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+    logger.error('Webhook signature verification failed', { error: err.message });
     return NextResponse.json(
       { error: 'Webhook signature verification failed' },
       { status: 400 }
@@ -32,13 +34,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (!order) {
-        console.error('Order not found for session:', session.id);
+        logger.warn('Order not found for Stripe session', { sessionId: session.id });
         return NextResponse.json({ received: true });
       }
 
       // 既に支払い済みの場合はスキップ
       if (order.status === 'PAID') {
-        console.log('Order already paid:', order.id);
+        logger.info('Order already paid, skipping', { orderId: order.id });
         return NextResponse.json({ received: true });
       }
 
@@ -110,6 +112,12 @@ export async function POST(request: NextRequest) {
             isExchanged: t.isExchanged,
           })),
         });
+        
+        logger.stripe(event.type, 'processed');
+        logger.success('Order completed successfully', {
+          orderId: order.id,
+          ticketCount: updatedOrder.tickets.length,
+        });
       }
     } else if (event.type === 'checkout.session.expired') {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -126,16 +134,19 @@ export async function POST(request: NextRequest) {
             cancelledAt: new Date(),
           },
         });
-        console.log('Order cancelled due to session expiry:', order.id);
+        logger.info('Order cancelled due to session expiry', { orderId: order.id });
       }
+      logger.stripe(event.type, 'processed');
     } else if (event.type === 'payment_intent.payment_failed') {
       // 支払い失敗イベント（必要に応じてメール通知などを追加）
-      console.warn('Payment failed event received:', event.id);
+      logger.warn('Payment failed event received', { eventId: event.id });
+      logger.stripe(event.type, 'processed');
     }
 
     return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error('Webhook processing error:', error);
+  } catch (error: any) {
+    logger.error('Webhook processing error', { error: error.message });
+    logger.stripe(event.type, 'failed');
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }

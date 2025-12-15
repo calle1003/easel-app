@@ -17,9 +17,9 @@ interface Performance {
   id: number;
   title: string;
   volume: string;
-  performanceDate: Date;
-  performanceTime: Date;
-  doorsOpenTime: Date | null;
+  performanceDate: string; // ISO string from API
+  performanceTime: string; // ISO string from API
+  doorsOpenTime: string | null; // ISO string from API
   venueName: string;
   generalPrice: number;
   reservedPrice: number;
@@ -301,7 +301,7 @@ export default function TicketPurchasePage() {
     const orderData = {
       performanceId: selectedPerformance.id,
       performanceTitle: selectedPerformance.title,
-      date: selectedPerformance.performanceDate.toISOString().split('T')[0],
+      date: selectedPerformance.performanceDate.split('T')[0], // Already a string
       dateLabel: formatPerformanceLabel(selectedPerformance),
       hasExchangeCode: hasExchangeCode!,
       exchangeCodes: hasExchangeCode ? exchangeCodes.filter((c) => c.trim() !== '') : [],

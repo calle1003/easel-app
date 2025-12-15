@@ -2,10 +2,15 @@
 
 import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import type { CheckoutRequest, CheckoutResponse } from '@/types/checkout';
 import { revalidatePath } from 'next/cache';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+// Stripe Price IDs (ダッシュボードで作成済み)
+const GENERAL_PRICE_ID = 'price_1SbHIbHrC5XXQaL8fYhk5udi';
+const RESERVED_PRICE_ID = 'price_1SbHHCHrC5XXQaL81l7vjRAq';
 
 export async function createCheckoutSession(
   request: CheckoutRequest
@@ -99,30 +104,18 @@ export async function createCheckoutSession(
       });
     }
 
-    // 一般席（有料分）
+    // 一般席（有料分）- 既存の価格IDを使用
     if (chargeableGeneralQuantity > 0) {
       lineItems.push({
-        price_data: {
-          currency: 'jpy',
-          unit_amount: performance.generalPrice,
-          product_data: {
-            name: `${performance.title} 一般席`,
-          },
-        },
+        price: GENERAL_PRICE_ID,
         quantity: chargeableGeneralQuantity,
       });
     }
 
-    // 指定席
+    // 指定席 - 既存の価格IDを使用
     if (request.reservedQuantity > 0) {
       lineItems.push({
-        price_data: {
-          currency: 'jpy',
-          unit_amount: performance.reservedPrice,
-          product_data: {
-            name: `${performance.title} 指定席`,
-          },
-        },
+        price: RESERVED_PRICE_ID,
         quantity: request.reservedQuantity,
       });
     }
@@ -131,6 +124,14 @@ export async function createCheckoutSession(
     if (totalAmount <= 0) {
       return { success: false, error: 'お支払い金額が0円のため、決済は不要です。' };
     }
+
+    logger.info('Creating Stripe checkout session', {
+      customerEmail: request.customerEmail,
+      totalAmount,
+      generalQuantity: request.generalQuantity,
+      reservedQuantity: request.reservedQuantity,
+      exchangeCodes: validExchangeCodes.length,
+    });
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -171,6 +172,12 @@ export async function createCheckoutSession(
       },
     });
 
+    logger.success('Checkout session created successfully', {
+      sessionId: session.id,
+      orderId: order.id,
+      totalAmount,
+    });
+
     revalidatePath('/ticket');
 
     return {
@@ -182,7 +189,7 @@ export async function createCheckoutSession(
       },
     };
   } catch (error: any) {
-    console.error('Checkout error:', error);
+    logger.error('Checkout error', { error: error.message });
     return {
       success: false,
       error: error.message || '決済セッションの作成に失敗しました',

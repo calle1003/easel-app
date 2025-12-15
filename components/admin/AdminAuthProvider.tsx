@@ -114,6 +114,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  // ログインページ以外で認証されていない場合は何も表示しない（リダイレクト中）
+  if (!user && pathname !== '/admin/login') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400" />
+      </div>
+    );
+  }
+
   return (
     <AdminAuthContext.Provider value={{ user, loading, logout, adminFetch }}>
       {children}
