@@ -53,6 +53,8 @@ export default function AdminCheckInPage() {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scanControlsRef = useRef<any>(null); // ZXing decodeの制御オブジェクト
+  const mediaStreamRef = useRef<MediaStream | null>(null); // MediaStreamへの直接参照
 
   // 統計情報を取得
   useEffect(() => {
@@ -63,42 +65,55 @@ export default function AdminCheckInPage() {
 
   // カメラ初期化
   useEffect(() => {
+    console.log('Camera mode changed, isManualMode:', isManualMode);
     if (!isManualMode) {
       startCamera();
+    } else {
+      // 手動モードに切り替えたときもカメラを停止
+      void stopCamera();
     }
     return () => {
-      stopCamera();
+      console.log('Camera useEffect cleanup');
+      void stopCamera();
     };
   }, [isManualMode]);
 
   // ページを離れるときやタブが非表示になるときにカメラを停止
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.hidden) {
         console.log('Page hidden, stopping camera');
-        stopCamera();
+        await stopCamera();
       } else if (!isManualMode && scanStatus === 'idle') {
         console.log('Page visible, restarting camera');
         startCamera();
       }
     };
 
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
       console.log('Page unloading, stopping camera');
-      stopCamera();
+      await stopCamera();
+    };
+
+    const handlePopState = async () => {
+      console.log('Browser back/forward button pressed, stopping camera');
+      await stopCamera();
     };
 
     // イベントリスナーを追加
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange as any);
+    window.addEventListener('beforeunload', handleBeforeUnload as any);
+    window.addEventListener('pagehide', handleBeforeUnload as any);
+    window.addEventListener('popstate', handlePopState); // ブラウザの戻る/進むボタン
 
     return () => {
-      // クリーンアップ
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handleBeforeUnload);
-      stopCamera();
+      // クリーンアップ：必ずカメラを停止
+      console.log('Component unmounting, stopping camera');
+      document.removeEventListener('visibilitychange', handleVisibilityChange as any);
+      window.removeEventListener('beforeunload', handleBeforeUnload as any);
+      window.removeEventListener('pagehide', handleBeforeUnload as any);
+      window.removeEventListener('popstate', handlePopState);
+      void stopCamera();
     };
   }, [isManualMode, scanStatus]);
 
@@ -116,6 +131,10 @@ export default function AdminCheckInPage() {
 
   const startCamera = async () => {
     try {
+      // 既存のカメラストリームを先に停止
+      console.log('startCamera: Cleaning up any existing streams first');
+      await stopCamera();
+      
       if (!videoRef.current) {
         setCameraError('ビデオ要素が見つかりません');
         return;
@@ -212,7 +231,8 @@ export default function AdminCheckInPage() {
 
       console.log('Selected camera:', backCamera.label, backCamera.deviceId);
 
-      await codeReader.decodeFromVideoDevice(
+      // decodeFromVideoDeviceの戻り値（controls）を保存
+      const controls = await codeReader.decodeFromVideoDevice(
         backCamera.deviceId,
         videoRef.current,
         (result: any) => {
@@ -224,9 +244,18 @@ export default function AdminCheckInPage() {
           // エラーは無視（継続的にスキャン）
         }
       );
+      
+      // controlsオブジェクトを保存（stop()メソッドを持つ）
+      scanControlsRef.current = controls;
+      
+      // MediaStreamへの参照を保存（少し待機してから）
+      setTimeout(() => {
+        if (videoRef.current && videoRef.current.srcObject) {
+          mediaStreamRef.current = videoRef.current.srcObject as MediaStream;
+        }
+      }, 100);
 
       setIsCameraReady(true);
-      console.log('Camera started successfully');
 
     } catch (error: any) {
       console.error('Camera error:', error);
@@ -254,34 +283,68 @@ export default function AdminCheckInPage() {
     }
   };
 
-  const stopCamera = () => {
-    console.log('Stopping camera...');
-    
-    // ビデオ要素のストリームを停止
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => {
-        console.log('Stopping track:', track.kind, track.label);
-        track.stop();
+  const stopCamera = async () => {
+    try {
+      // 1. カメラ準備状態をすぐにfalseに
+      setIsCameraReady(false);
+      
+      // 2. 保存されたMediaStreamを先に停止（最優先）
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
+      
+      // 3. ZXing scanのcontrolsを停止
+      if (scanControlsRef.current) {
+        try {
+          if (typeof scanControlsRef.current.stop === 'function') {
+            scanControlsRef.current.stop();
+          }
+        } catch (error) {
+          console.error('Error stopping scan controls:', error);
+        }
+        scanControlsRef.current = null;
+      }
+      
+      // 4. ビデオ要素のストリームも停止（念のため）
+      if (videoRef.current) {
+        if (videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // ビデオ要素をクリーンアップ
+        videoRef.current.srcObject = null;
+        videoRef.current.pause();
+        videoRef.current.src = '';
+        videoRef.current.load();
+      }
+      
+      // 5. すべてのビデオ要素をチェックして強制停止
+      document.querySelectorAll('video').forEach((video) => {
+        if (video.srcObject) {
+          const stream = video.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+          video.srcObject = null;
+          video.src = '';
+          video.load();
+        }
       });
-      videoRef.current.srcObject = null;
-      console.log('Video stream stopped');
+      
+      // 6. QRCodeReaderの参照をクリア
+      if (codeReaderRef.current) {
+        codeReaderRef.current = null;
+      }
+    } catch (error) {
+      console.error('Error stopping camera:', error);
     }
-    
-    // QRCodeReaderの参照をクリア
-    if (codeReaderRef.current) {
-      codeReaderRef.current = null;
-      console.log('QRCodeReader reference cleared');
-    }
-    
-    setIsCameraReady(false);
   };
 
   const handleScan = async (ticketCode: string) => {
     if (scanStatus === 'scanning' || scanStatus === 'verified') return; // 処理中または確認待ちは無視
 
     // カメラを停止（連続スキャン防止）
-    stopCamera();
+    await stopCamera();
 
     setScanStatus('scanning');
     setTicketInfo(null);
@@ -486,8 +549,10 @@ export default function AdminCheckInPage() {
       {/* Header */}
       <div className="bg-slate-800 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
         <button 
-          onClick={() => {
-            stopCamera();
+          onClick={async () => {
+            await stopCamera();
+            // 短い待機でカメラリソースを解放
+            await new Promise(resolve => setTimeout(resolve, 50));
             router.push('/admin');
           }}
           className="flex items-center gap-2 text-slate-300 hover:text-white"
