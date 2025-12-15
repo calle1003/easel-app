@@ -100,12 +100,12 @@ export default function AdminCheckInPage() {
         return;
       }
 
-      // まずカメラ権限をリクエスト（背面カメラを明示的に要求）
+      // まずカメラ権限をリクエスト（背面カメラを優先、なければ前面カメラ）
       try {
-        console.log('Requesting camera permission for back camera...');
+        console.log('Requesting camera permission...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
-            facingMode: { exact: 'environment' } // 背面カメラを厳密に要求
+            facingMode: { ideal: 'environment' } // 背面カメラを優先（必須ではない）
           } 
         });
         console.log('Camera permission granted');
@@ -113,33 +113,28 @@ export default function AdminCheckInPage() {
         stream.getTracks().forEach(track => track.stop());
       } catch (permError: any) {
         console.error('Permission error:', permError);
-        // exactで失敗した場合、idealで再試行
-        if (permError.name === 'OverconstrainedError' || permError.name === 'ConstraintNotSatisfiedError') {
-          try {
-            console.log('Retrying with ideal facingMode...');
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { 
-                facingMode: { ideal: 'environment' } // 背面カメラを優先（必須ではない）
-              } 
-            });
-            stream.getTracks().forEach(track => track.stop());
-          } catch (retryError: any) {
-            console.error('Retry error:', retryError);
-            if (retryError.name === 'NotAllowedError') {
-              setCameraError('カメラへのアクセスが拒否されました。ブラウザの設定でカメラを許可してください。または「手動入力へ」をタップしてください。');
-            } else {
-              setCameraError(`カメラの許可エラー: ${retryError.message}。「手動入力へ」をタップしてチケットコードを入力してください。`);
-            }
-            return;
-          }
-        } else if (permError.name === 'NotAllowedError') {
+        
+        if (permError.name === 'NotAllowedError') {
           setCameraError('カメラへのアクセスが拒否されました。ブラウザの設定でカメラを許可してください。または「手動入力へ」をタップしてください。');
           return;
         } else if (permError.name === 'NotFoundError') {
-          setCameraError('カメラが見つかりませんでした。「手動入力へ」をタップしてチケットコードを入力してください。');
+          setCameraError('カメラが見つかりません。デバイスにカメラが接続されているか確認してください。または「手動入力へ」をタップしてください。');
           return;
+        } else if (permError.name === 'OverconstrainedError' || permError.name === 'ConstraintNotSatisfiedError') {
+          // 制約エラー: 制約なしで再試行
+          console.log('Retrying without constraints...');
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(track => track.stop());
+          } catch (retryError: any) {
+            console.error('Retry error:', retryError);
+            setCameraError(`カメラの起動に失敗しました: ${retryError.message}。「手動入力へ」をタップしてチケットコードを入力してください。`);
+            return;
+          }
         } else {
-          setCameraError(`カメラの許可エラー: ${permError.message}。「手動入力へ」をタップしてチケットコードを入力してください。`);
+          // その他のエラー
+          console.warn('Camera permission warning:', permError);
+          setCameraError(`カメラエラー: ${permError.message}。「手動入力へ」をタップしてチケットコードを入力してください。`);
           return;
         }
       }
@@ -211,16 +206,18 @@ export default function AdminCheckInPage() {
       let errorMsg = 'カメラの起動に失敗しました';
       
       if (error?.name === 'NotAllowedError') {
-        errorMsg = 'カメラへのアクセスが拒否されました';
+        errorMsg = 'カメラへのアクセスが拒否されました。ブラウザの設定でカメラを許可してください';
       } else if (error?.name === 'NotFoundError') {
-        errorMsg = 'カメラが見つかりませんでした';
+        errorMsg = 'カメラが見つかりませんでした。デバイスにカメラが接続されているか確認してください';
       } else if (error?.name === 'NotReadableError') {
-        errorMsg = 'カメラは他のアプリで使用中です';
+        errorMsg = 'カメラは他のアプリで使用中です。他のアプリを終了してから再度お試しください';
+      } else if (error?.name === 'OverconstrainedError' || error?.name === 'ConstraintNotSatisfiedError') {
+        errorMsg = 'カメラの設定に対応していません。別のデバイスでお試しいただくか、「手動入力へ」をタップしてください';
       } else if (error?.message) {
         errorMsg = error.message;
       }
       
-      setCameraError(`${errorMsg}。ブラウザの設定でカメラへのアクセスを許可してください。`);
+      setCameraError(`${errorMsg}。下の「手動入力へ」ボタンでチケットコードを入力することもできます。`);
     }
   };
 
