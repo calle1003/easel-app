@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev.js",
+    "dev": "nodemon",
+    "dev:manual": "node scripts/dev.js",
     "dev:verbose": "next dev",
     "build": "next build",
     "start": "next start",
@@ -47,6 +48,7 @@
     "@types/react-dom": "^19.0.2",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.0.3",
+    "nodemon": "^3.1.11",
     "prisma": "^5.20.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

@@ -1,0 +1,12 @@
+{
+  "watch": [
+    ".env.local",
+    "next.config.ts",
+    "next.config.js",
+    "middleware.ts",
+    "package.json"
+  ],
+  "ext": "ts,js,json",
+  "exec": "node scripts/dev.js",
+  "delay": 1000
+}
