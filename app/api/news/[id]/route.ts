@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -23,7 +25,7 @@ export async function GET(
 
     return NextResponse.json(news);
   } catch (error) {
-    console.error('Failed to fetch news:', error);
+    logger.error('Failed to fetch news', { error });
     return NextResponse.json(
       { error: 'Failed to fetch news' },
       { status: 500 }
@@ -35,6 +37,11 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const newsId = parseInt(id);
@@ -56,7 +63,7 @@ export async function PUT(
 
     return NextResponse.json(news);
   } catch (error) {
-    console.error('Failed to update news:', error);
+    logger.error('Failed to update news', { error });
     return NextResponse.json(
       { error: 'Failed to update news' },
       { status: 500 }
@@ -68,6 +75,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const newsId = parseInt(id);
@@ -82,7 +94,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete news:', error);
+    logger.error('Failed to delete news', { error });
     return NextResponse.json(
       { error: 'Failed to delete news' },
       { status: 500 }

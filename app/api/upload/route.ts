@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile } from 'fs/promises';
+import { logger } from '@/lib/logger';
 import path from 'path';
 
 // ファイルアップロード用のルート設定
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
     });
   } catch (error) {
-    console.error('Failed to upload file:', error);
+    logger.error('Failed to upload file', { error });
     return NextResponse.json(
       { error: 'ファイルのアップロードに失敗しました' },
       { status: 500 }

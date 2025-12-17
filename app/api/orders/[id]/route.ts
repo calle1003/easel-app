@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken, getTokenFromHeader } from '@/lib/auth';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const orderId = parseInt(id);
@@ -25,7 +31,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('Failed to fetch order:', error);
+    logger.error('Failed to fetch order', { error });
     return NextResponse.json(
       { error: 'Failed to fetch order' },
       { status: 500 }
@@ -37,19 +43,12 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = getTokenFromHeader(authHeader);
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
     const orderId = parseInt(id);
     const body = await request.json();
@@ -69,7 +68,7 @@ export async function PUT(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error('Failed to update order:', error);
+    logger.error('Failed to update order', { error });
     return NextResponse.json(
       { error: 'Failed to update order' },
       { status: 500 }
@@ -81,19 +80,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = getTokenFromHeader(authHeader);
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payload = await verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { id } = await params;
     const orderId = parseInt(id);
 
@@ -107,7 +99,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete order:', error);
+    logger.error('Failed to delete order', { error });
     return NextResponse.json(
       { error: 'Failed to delete order' },
       { status: 500 }

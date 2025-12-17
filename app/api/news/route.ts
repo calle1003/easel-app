@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -8,7 +10,7 @@ export async function GET() {
     });
     return NextResponse.json(news);
   } catch (error) {
-    console.error('Failed to fetch news:', error);
+    logger.error('Failed to fetch news', { error });
     return NextResponse.json(
       { error: 'Failed to fetch news' },
       { status: 500 }
@@ -17,6 +19,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const news = await prisma.news.create({
@@ -29,7 +36,7 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(news, { status: 201 });
   } catch (error) {
-    console.error('Failed to create news:', error);
+    logger.error('Failed to create news', { error });
     return NextResponse.json(
       { error: 'Failed to create news' },
       { status: 500 }

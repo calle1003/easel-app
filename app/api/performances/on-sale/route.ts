@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -54,7 +55,7 @@ export async function GET() {
 
     return NextResponse.json(onSaleSessions);
   } catch (error) {
-    console.error('Failed to fetch on-sale performances:', error);
+    logger.error('Failed to fetch on-sale performances', { error });
     return NextResponse.json(
       { error: 'Failed to fetch performances' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import QRCode from 'qrcode';
 
 export async function GET(
@@ -30,7 +31,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Failed to generate QR code:', error);
+    logger.error('Failed to generate QR code', { error });
     return new NextResponse('QRコードの生成に失敗しました', { status: 500 });
   }
 }

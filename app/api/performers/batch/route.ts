@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 // 引換券コード生成関数（英数字5桁のランダム文字列）
 function generateRandomCode(): string {
@@ -19,6 +21,11 @@ function generateExchangeCode(volume: string): string {
 
 // POST: 出演者を一括登録
 export async function POST(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { performers, performanceIds, codesPerSession = {} } = body;
@@ -132,7 +139,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Failed to batch create performers:', error);
+    logger.error('Failed to batch create performers', { error });
     return NextResponse.json(
       { error: '一括登録に失敗しました' },
       { status: 500 }

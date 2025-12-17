@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sessionId: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { id, sessionId } = await params;
     const performanceId = parseInt(id);
@@ -43,7 +50,7 @@ export async function PUT(
 
     return NextResponse.json(session);
   } catch (error) {
-    console.error('Failed to update session:', error);
+    logger.error('Failed to update session', { error });
     return NextResponse.json(
       { error: 'Failed to update session' },
       { status: 500 }
@@ -55,6 +62,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; sessionId: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { id, sessionId } = await params;
     const performanceId = parseInt(id);
@@ -70,7 +82,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete session:', error);
+    logger.error('Failed to delete session', { error });
     return NextResponse.json(
       { error: 'Failed to delete session' },
       { status: 500 }

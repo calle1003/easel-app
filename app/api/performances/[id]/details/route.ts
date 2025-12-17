@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const performanceId = parseInt(id);
@@ -29,7 +36,7 @@ export async function PUT(
 
     return NextResponse.json(performance);
   } catch (error) {
-    console.error('Failed to update performance details:', error);
+    logger.error('Failed to update performance details', { error });
     return NextResponse.json(
       { error: 'Failed to update performance details' },
       { status: 500 }

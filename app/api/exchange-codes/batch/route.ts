@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 // 引換券コード生成関数（英数字5桁のランダム文字列）
 function generateRandomCode(): string {
@@ -18,6 +20,11 @@ function generateExchangeCode(volume: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const { performerId, codesPerSession = {} } = await request.json();
 
@@ -106,7 +113,7 @@ export async function POST(request: NextRequest) {
       count: created.count,
     });
   } catch (error) {
-    console.error('Failed to create batch exchange codes:', error);
+    logger.error('Failed to create batch exchange codes', { error });
     return NextResponse.json(
       { error: 'Failed to create exchange codes' },
       { status: 500 }

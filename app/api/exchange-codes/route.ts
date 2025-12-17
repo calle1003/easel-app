@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const codes = await prisma.exchangeCode.findMany({
       orderBy: [
@@ -63,7 +70,7 @@ export async function GET() {
 
     return NextResponse.json(codesWithAttendance);
   } catch (error) {
-    console.error('Failed to fetch exchange codes:', error);
+    logger.error('Failed to fetch exchange codes', { error });
     return NextResponse.json(
       { error: 'Failed to fetch exchange codes' },
       { status: 500 }
@@ -72,6 +79,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { code, performerId, performanceSessionId } = body;
@@ -145,7 +157,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    console.error('Failed to create exchange code:', error);
+    logger.error('Failed to create exchange code', { error });
     return NextResponse.json(
       { error: 'Failed to create exchange code' },
       { status: 500 }
