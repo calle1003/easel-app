@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft, Pencil, Trash2, Plus, Calendar, Clock, MapPin } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 import { PerformanceModal, PerformanceFormData, SessionDateData } from './modals/PerformanceModal';
-import { SessionModal, SessionFormData } from './modals/SessionModal';
 import { DetailModal, DetailFormData } from './modals/DetailModal';
 
 interface PerformanceSession {
@@ -57,11 +56,8 @@ export default function AdminPerformancesPage() {
   const [performances, setPerformances] = useState<Performance[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
-  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingPerformanceId, setEditingPerformanceId] = useState<number | null>(null);
-  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
-  const [selectedPerformanceId, setSelectedPerformanceId] = useState<number | null>(null);
   const [editingDetailPerformanceId, setEditingDetailPerformanceId] = useState<number | null>(null);
   
   const [performanceFormData, setPerformanceFormData] = useState<PerformanceFormData>({
@@ -82,7 +78,16 @@ export default function AdminPerformancesPage() {
   });
 
   const [sessionsDatesData, setSessionsDatesData] = useState<SessionDateData[]>([
-    { showNumber: 1, performanceDate: '', performanceTime: '', doorsOpenTime: '' }
+    { 
+      showNumber: 1, 
+      performanceDate: '', 
+      performanceTime: '', 
+      doorsOpenTime: '',
+      generalCapacity: 100,
+      reservedCapacity: 30,
+      vip1Capacity: 0,
+      vip2Capacity: 0,
+    }
   ]);
 
   const [detailFormData, setDetailFormData] = useState<DetailFormData>({
@@ -95,20 +100,6 @@ export default function AdminPerformancesPage() {
   });
 
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
-
-  const [sessionFormData, setSessionFormData] = useState<SessionFormData>({
-    showNumber: '',
-    performanceDate: '',
-    performanceTime: '',
-    doorsOpenTime: '',
-    venueName: '',
-    venueAddress: '',
-    venueAccess: '',
-    generalCapacity: 100,
-    reservedCapacity: 30,
-    vip1Capacity: 0,
-    vip2Capacity: 0,
-  });
 
   useEffect(() => {
     fetchPerformances();
@@ -147,7 +138,16 @@ export default function AdminPerformancesPage() {
       description: '',
     });
     setSessionsDatesData([
-      { showNumber: 1, performanceDate: '', performanceTime: '', doorsOpenTime: '' }
+      { 
+        showNumber: 1, 
+        performanceDate: '', 
+        performanceTime: '', 
+        doorsOpenTime: '',
+        generalCapacity: 100,
+        reservedCapacity: 30,
+        vip1Capacity: 0,
+        vip2Capacity: 0,
+      }
     ]);
     setIsPerformanceModalOpen(true);
   };
@@ -173,6 +173,43 @@ export default function AdminPerformancesPage() {
       vip2Note: perf.vip2Note || '',
       description: perf.description || '',
     });
+    
+    // 既存セッションデータを読み込む
+    setSessionsDatesData(
+      perf.sessions.map(session => {
+        // 時刻データの変換
+        let timeValue = '';
+        if (typeof session.performanceTime === 'string') {
+          if (session.performanceTime.includes('T')) {
+            timeValue = session.performanceTime.split('T')[1].slice(0, 5);
+          } else {
+            timeValue = session.performanceTime.slice(0, 5);
+          }
+        }
+        
+        let doorsValue = '';
+        if (session.doorsOpenTime && typeof session.doorsOpenTime === 'string') {
+          if (session.doorsOpenTime.includes('T')) {
+            doorsValue = session.doorsOpenTime.split('T')[1].slice(0, 5);
+          } else {
+            doorsValue = session.doorsOpenTime.slice(0, 5);
+          }
+        }
+        
+        return {
+          id: session.id,
+          showNumber: session.showNumber,
+          performanceDate: session.performanceDate,
+          performanceTime: timeValue,
+          doorsOpenTime: doorsValue,
+          generalCapacity: session.generalCapacity,
+          reservedCapacity: session.reservedCapacity,
+          vip1Capacity: session.vip1Capacity || 0,
+          vip2Capacity: session.vip2Capacity || 0,
+        };
+      })
+    );
+    
     setIsPerformanceModalOpen(true);
   };
 
@@ -206,84 +243,6 @@ export default function AdminPerformancesPage() {
     }
   };
 
-  const handleNewSession = (performanceId: number) => {
-    setSelectedPerformanceId(performanceId);
-    setEditingSessionId(null);
-    const performance = performances.find(p => p.id === performanceId);
-    const nextShowNumber = performance ? Math.max(...performance.sessions.map(s => s.showNumber), 0) + 1 : 1;
-    
-    setSessionFormData({
-      showNumber: String(nextShowNumber),
-      performanceDate: '',
-      performanceTime: '',
-      doorsOpenTime: '',
-      venueName: '',
-      venueAddress: '',
-      venueAccess: '',
-      generalCapacity: 100,
-      reservedCapacity: 30,
-      vip1Capacity: 0,
-      vip2Capacity: 0,
-    });
-    setIsSessionModalOpen(true);
-  };
-
-  const handleEditSession = (performanceId: number, session: PerformanceSession) => {
-    setSelectedPerformanceId(performanceId);
-    setEditingSessionId(session.id);
-    
-    let timeValue = '';
-    if (typeof session.performanceTime === 'string') {
-      if (session.performanceTime.includes('T')) {
-        timeValue = session.performanceTime.split('T')[1].slice(0, 5);
-      } else {
-        timeValue = session.performanceTime.slice(0, 5);
-      }
-    }
-
-    setSessionFormData({
-      showNumber: String(session.showNumber),
-      performanceDate: session.performanceDate,
-      performanceTime: timeValue,
-      doorsOpenTime: session.doorsOpenTime || '',
-      venueName: session.venueName,
-      venueAddress: session.venueAddress || '',
-      venueAccess: session.venueAccess || '',
-      generalCapacity: session.generalCapacity,
-      reservedCapacity: session.reservedCapacity,
-      vip1Capacity: session.vip1Capacity || 0,
-      vip2Capacity: session.vip2Capacity || 0,
-    });
-    setIsSessionModalOpen(true);
-  };
-
-  const handleSubmitSession = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPerformanceId) return;
-
-    const url = editingSessionId
-      ? `/api/performances/${selectedPerformanceId}/sessions/${editingSessionId}`
-      : `/api/performances/${selectedPerformanceId}/sessions`;
-    const method = editingSessionId ? 'PUT' : 'POST';
-
-    try {
-      const response = await adminFetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...sessionFormData,
-          showNumber: parseInt(sessionFormData.showNumber, 10),
-        }),
-      });
-
-      if (response.ok) {
-        fetchPerformances();
-        setIsSessionModalOpen(false);
-      }
-    } catch (error) {
-      console.error('Failed to save session:', error);
-    }
-  };
 
   const handleEditDetails = (perf: Performance) => {
     setEditingDetailPerformanceId(perf.id);
@@ -369,18 +328,6 @@ export default function AdminPerformancesPage() {
     }
   };
 
-  const handleDeleteSession = async (performanceId: number, sessionId: number) => {
-    if (!confirm('このセッションを削除しますか？')) return;
-
-    try {
-      const response = await adminFetch(`/api/performances/${performanceId}/sessions/${sessionId}`, { method: 'DELETE' });
-      if (response.ok) {
-        fetchPerformances();
-      }
-    } catch (error) {
-      console.error('Failed to delete session:', error);
-    }
-  };
 
   const formatShowNumber = (num: number) => {
     const suffixes = ['th', 'st', 'nd', 'rd'];
@@ -489,13 +436,6 @@ export default function AdminPerformancesPage() {
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-medium text-slate-700">公演日程 ({perf.sessions.length})</h3>
-                    <button
-                      onClick={() => handleNewSession(perf.id)}
-                      className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
-                    >
-                      <Plus size={14} />
-                      セッション追加
-                    </button>
                   </div>
 
                   {perf.sessions.length === 0 ? (
@@ -532,26 +472,27 @@ export default function AdminPerformancesPage() {
                               一般: {session.generalSold}/{session.generalCapacity} 
                               <span className="mx-2">|</span>
                               指定: {session.reservedSold}/{session.reservedCapacity}
+                              {session.vip1Capacity > 0 && (
+                                <>
+                                  <span className="mx-2">|</span>
+                                  VIP①: {session.vip1Sold}/{session.vip1Capacity}
+                                </>
+                              )}
+                              {session.vip2Capacity > 0 && (
+                                <>
+                                  <span className="mx-2">|</span>
+                                  VIP②: {session.vip2Sold}/{session.vip2Capacity}
+                                </>
+                              )}
                             </div>
-                          </div>
-                          <div className="flex gap-2 ml-4">
-                            <button
-                              onClick={() => handleEditSession(perf.id, session)}
-                              className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSession(perf.id, session.id)}
-                              className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 size={14} />
-                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
+                  <p className="text-xs text-slate-500 mt-3 text-center">
+                    ※ セッションの編集は「公演を編集」から行えます
+                  </p>
                 </div>
               </div>
             ))}
@@ -571,14 +512,6 @@ export default function AdminPerformancesPage() {
         onSubmit={handleSubmitPerformance}
       />
 
-      <SessionModal
-        isOpen={isSessionModalOpen}
-        onClose={() => setIsSessionModalOpen(false)}
-        editingSessionId={editingSessionId}
-        sessionFormData={sessionFormData}
-        setSessionFormData={setSessionFormData}
-        onSubmit={handleSubmitSession}
-      />
 
       <DetailModal
         isOpen={isDetailModalOpen}

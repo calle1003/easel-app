@@ -161,7 +161,7 @@ export default function TicketConfirmPage() {
                 <div className="flex justify-between">
                   <span className="text-slate-500">一般席（自由席）</span>
                   <span className="text-slate-700">
-                  ¥{generalPrice.toLocaleString()} × {generalQuantity}枚
+                    ¥{generalPrice.toLocaleString()} × {generalQuantity}枚
                   </span>
                 </div>
               )}
@@ -169,7 +169,23 @@ export default function TicketConfirmPage() {
                 <div className="flex justify-between">
                   <span className="text-slate-500">指定席</span>
                   <span className="text-slate-700">
-                  ¥{reservedPrice.toLocaleString()} × {reservedQuantity}枚
+                    ¥{reservedPrice.toLocaleString()} × {reservedQuantity}枚
+                  </span>
+                </div>
+              )}
+              {vip1Quantity > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">VIP①席</span>
+                  <span className="text-amber-700 font-medium">
+                    ¥{vip1Price.toLocaleString()} × {vip1Quantity}枚
+                  </span>
+                </div>
+              )}
+              {vip2Quantity > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">VIP②席</span>
+                  <span className="text-purple-700 font-medium">
+                    ¥{vip2Price.toLocaleString()} × {vip2Quantity}枚
                   </span>
                 </div>
               )}
@@ -249,7 +265,7 @@ export default function TicketConfirmPage() {
               )}
               {vip1Quantity > 0 && (
                 <div className="flex justify-between text-amber-700">
-                  <span>VIP①席 × {vip1Quantity}</span>
+                  <span>VIP①席 ¥{vip1Price.toLocaleString()} × {vip1Quantity}枚</span>
                   <span>
                     ¥{(vip1Quantity * vip1Price).toLocaleString()}
                   </span>
@@ -257,7 +273,7 @@ export default function TicketConfirmPage() {
               )}
               {vip2Quantity > 0 && (
                 <div className="flex justify-between text-purple-700">
-                  <span>VIP②席 × {vip2Quantity}</span>
+                  <span>VIP②席 ¥{vip2Price.toLocaleString()} × {vip2Quantity}枚</span>
                   <span>
                     ¥{(vip2Quantity * vip2Price).toLocaleString()}
                   </span>

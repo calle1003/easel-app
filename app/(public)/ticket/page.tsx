@@ -841,25 +841,25 @@ export default function TicketPurchasePage() {
               <div className="space-y-4 mb-10">
                 {generalQuantity > 0 && (
                   <div className="flex items-center justify-between text-slate-500">
-                    <span>一般席 × {generalQuantity}</span>
+                    <span>一般席 ¥{generalPrice.toLocaleString()} × {generalQuantity}枚</span>
                     <span>¥{(generalQuantity * generalPrice).toLocaleString()}</span>
                   </div>
                 )}
                 {reservedQuantity > 0 && (
                   <div className="flex items-center justify-between text-slate-500">
-                    <span>指定席 × {reservedQuantity}</span>
+                    <span>指定席 ¥{reservedPrice.toLocaleString()} × {reservedQuantity}枚</span>
                     <span>¥{calculations.reservedTotal.toLocaleString()}</span>
                   </div>
                 )}
                 {vip1Quantity > 0 && (
                   <div className="flex items-center justify-between text-amber-700">
-                    <span>VIP①席 × {vip1Quantity}</span>
+                    <span>VIP①席 ¥{vip1Price.toLocaleString()} × {vip1Quantity}枚</span>
                     <span>¥{calculations.vip1Total.toLocaleString()}</span>
                   </div>
                 )}
                 {vip2Quantity > 0 && (
                   <div className="flex items-center justify-between text-purple-700">
-                    <span>VIP②席 × {vip2Quantity}</span>
+                    <span>VIP②席 ¥{vip2Price.toLocaleString()} × {vip2Quantity}枚</span>
                     <span>¥{calculations.vip2Total.toLocaleString()}</span>
                   </div>
                 )}

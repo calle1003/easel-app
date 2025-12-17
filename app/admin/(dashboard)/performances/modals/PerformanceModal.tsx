@@ -21,10 +21,15 @@ export interface PerformanceFormData {
 }
 
 export interface SessionDateData {
+  id?: number; // 編集時のみ存在
   showNumber: number;
   performanceDate: string;
   performanceTime: string;
   doorsOpenTime: string;
+  generalCapacity: number | '';
+  reservedCapacity: number | '';
+  vip1Capacity: number | '';
+  vip2Capacity: number | '';
 }
 
 interface PerformanceModalProps {
@@ -63,6 +68,21 @@ export function PerformanceModal({
     
     // 1〜20回の制限（バリデーション）
     if (num >= 1 && num <= 20) {
+      // 編集時にセッション数を減らす場合は確認
+      if (editingPerformanceId && num < sessionsDatesData.length) {
+        const hasExistingData = sessionsDatesData.slice(num).some(s => s.id);
+        if (hasExistingData) {
+          const confirmed = confirm(
+            `公演回数を${sessionsDatesData.length}回から${num}回に減らすと、` +
+            `${sessionsDatesData.length - num}個の既存セッションが削除されます。\n` +
+            `よろしいですか？`
+          );
+          if (!confirmed) {
+            return; // キャンセルされた場合は変更しない
+          }
+        }
+      }
+
       setPerformanceFormData({ ...performanceFormData, numberOfShows: num });
 
       // 既存のセッション配列をコピー
@@ -76,6 +96,10 @@ export function PerformanceModal({
             performanceDate: '',
             performanceTime: '',
             doorsOpenTime: '',
+            generalCapacity: 100,
+            reservedCapacity: 30,
+            vip1Capacity: 0,
+            vip2Capacity: 0,
           });
         }
       } else if (num < newSessions.length) {
@@ -85,6 +109,14 @@ export function PerformanceModal({
       
       setSessionsDatesData(newSessions);
     }
+  };
+
+  // 座席数変更ハンドラ
+  const handleCapacityChange = (index: number, field: 'generalCapacity' | 'reservedCapacity' | 'vip1Capacity' | 'vip2Capacity', value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const newData = [...sessionsDatesData];
+    newData[index][field] = numericValue === '' ? '' : parseInt(numericValue, 10);
+    setSessionsDatesData(newData);
   };
 
   return (
@@ -135,10 +167,11 @@ export function PerformanceModal({
               className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
               placeholder="1"
               required
-              disabled={!!editingPerformanceId}
             />
             <p className="text-xs text-slate-500 mt-1">
-              {editingPerformanceId ? '※編集時は変更不可' : '1〜20回'}
+              {editingPerformanceId 
+                ? '1〜20回（減らすと既存セッションが削除されます）' 
+                : '1〜20回'}
             </p>
           </div>
           <div>
@@ -158,65 +191,119 @@ export function PerformanceModal({
           </div>
         </div>
 
-        {/* セッション日時フォーム */}
-        {!editingPerformanceId && (
-          <div className="border-t border-slate-200 pt-4">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">各セッションの日時</h3>
-            <p className="text-xs text-slate-500 mb-4">※ 公演回数に応じて入力欄が表示されます</p>
-            <div className="space-y-4">
-              {sessionsDatesData.map((session, index) => (
-                <div key={session.showNumber} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                  <p className="text-sm font-medium text-slate-700 mb-3">
-                    {session.showNumber}回目 ({index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th`})
-                  </p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">公演日</label>
-                      <input
-                        type="date"
-                        value={session.performanceDate}
-                        onChange={(e) => {
-                          const newData = [...sessionsDatesData];
-                          newData[index].performanceDate = e.target.value;
-                          setSessionsDatesData(newData);
-                        }}
-                        className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">開演時刻</label>
-                      <input
-                        type="time"
-                        value={session.performanceTime}
-                        onChange={(e) => {
-                          const newData = [...sessionsDatesData];
-                          newData[index].performanceTime = e.target.value;
-                          setSessionsDatesData(newData);
-                        }}
-                        className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-slate-500 mb-1">開場時刻</label>
-                      <input
-                        type="time"
-                        value={session.doorsOpenTime}
-                        onChange={(e) => {
-                          const newData = [...sessionsDatesData];
-                          newData[index].doorsOpenTime = e.target.value;
-                          setSessionsDatesData(newData);
-                        }}
-                        className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
-                      />
-                    </div>
+        {/* セッション日時・座席数フォーム */}
+        <div className="border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-medium text-slate-700 mb-3">各セッションの詳細</h3>
+          <p className="text-xs text-slate-500 mb-4">
+            {editingPerformanceId 
+              ? '※ 日時と座席数を編集できます' 
+              : '※ 公演回数に応じて入力欄が表示されます'}
+          </p>
+          <div className="space-y-4">
+            {sessionsDatesData.map((session, index) => (
+              <div key={session.id || session.showNumber} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-sm font-medium text-slate-700 mb-3">
+                  {session.showNumber}回目 ({index === 0 ? '1st' : index === 1 ? '2nd' : index === 2 ? '3rd' : `${index + 1}th`})
+                </p>
+                
+                {/* 日時入力 */}
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">公演日</label>
+                    <input
+                      type="date"
+                      value={session.performanceDate}
+                      onChange={(e) => {
+                        const newData = [...sessionsDatesData];
+                        newData[index].performanceDate = e.target.value;
+                        setSessionsDatesData(newData);
+                      }}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">開演時刻</label>
+                    <input
+                      type="time"
+                      value={session.performanceTime}
+                      onChange={(e) => {
+                        const newData = [...sessionsDatesData];
+                        newData[index].performanceTime = e.target.value;
+                        setSessionsDatesData(newData);
+                      }}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">開場時刻</label>
+                    <input
+                      type="time"
+                      value={session.doorsOpenTime}
+                      onChange={(e) => {
+                        const newData = [...sessionsDatesData];
+                        newData[index].doorsOpenTime = e.target.value;
+                        setSessionsDatesData(newData);
+                      }}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* 座席数入力 */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">一般席数</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={session.generalCapacity}
+                      onChange={(e) => handleCapacityChange(index, 'generalCapacity', e.target.value)}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                      placeholder="100"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">指定席数</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={session.reservedCapacity}
+                      onChange={(e) => handleCapacityChange(index, 'reservedCapacity', e.target.value)}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                      placeholder="30"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">VIP①席数</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={session.vip1Capacity}
+                      onChange={(e) => handleCapacityChange(index, 'vip1Capacity', e.target.value)}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">VIP②席数</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={session.vip2Capacity}
+                      onChange={(e) => handleCapacityChange(index, 'vip2Capacity', e.target.value)}
+                      className="w-full p-2 text-sm border border-slate-200 rounded focus:outline-none focus:border-slate-400"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* 会場情報 */}
         <div className="border-t border-slate-200 pt-4">
