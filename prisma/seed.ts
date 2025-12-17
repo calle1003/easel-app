@@ -155,11 +155,12 @@ easelに関する最新情報をお届けしてまいります。
   let createdCount = 0;
   for (const perfData of targetPerformances) {
     // 同じ日時・同じvolumeの公演が既に存在するか確認
+    // @ts-ignore - Legacy schema structure for seed data
     const exists = existingVol2Performances.some(
-      (p) =>
+      (p: any) =>
         p.volume === perfData.volume &&
-        p.performanceDate.getTime() === perfData.performanceDate.getTime() &&
-        p.performanceTime.getTime() === perfData.performanceTime.getTime()
+        p.performanceDate?.getTime() === perfData.performanceDate.getTime() &&
+        p.performanceTime?.getTime() === perfData.performanceTime.getTime()
     );
 
     if (!exists) {

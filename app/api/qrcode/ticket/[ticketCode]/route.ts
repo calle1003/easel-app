@@ -24,7 +24,7 @@ export async function GET(
       margin: 2,
     });
 
-    return new NextResponse(qrCodeBuffer, {
+    return new NextResponse(new Uint8Array(qrCodeBuffer), {
       headers: {
         'Content-Type': 'image/png',
       },

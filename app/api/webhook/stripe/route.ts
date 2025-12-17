@@ -3,18 +3,36 @@ import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { sendPurchaseConfirmationEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
+import { config } from '@/lib/config';
 import Stripe from 'stripe';
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = config.stripe.webhookSecret;
+
+// Replay攻撃対策: 5分以内のイベントのみ受け入れる
+const WEBHOOK_TOLERANCE = 300; // 秒
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
-  const signature = request.headers.get('stripe-signature')!;
+  const signature = request.headers.get('stripe-signature');
+
+  // 署名ヘッダーの検証
+  if (!signature) {
+    logger.error('Missing stripe-signature header');
+    return NextResponse.json(
+      { error: 'Missing signature' },
+      { status: 400 }
+    );
+  }
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      webhookSecret,
+      WEBHOOK_TOLERANCE
+    );
     logger.stripe(event.type, 'received');
   } catch (err: any) {
     logger.error('Webhook signature verification failed', { error: err.message });
@@ -38,96 +56,110 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      // 既に支払い済みの場合はスキップ
+      // 既に支払い済みの場合はスキップ（冪等性保証）
       if (order.status === 'PAID') {
         logger.info('Order already paid, skipping', { orderId: order.id });
         return NextResponse.json({ received: true });
       }
 
-      // 注文をPAIDに更新
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: 'PAID',
-          stripePaymentIntentId: session.payment_intent as string,
-          paidAt: new Date(),
-        },
+      // トランザクションで全ての処理を原子的に実行
+      await prisma.$transaction(async (tx) => {
+        // 1. 注文をPAIDに更新
+        await tx.order.update({
+          where: { id: order.id },
+          data: {
+            status: 'PAID',
+            stripePaymentIntentId: session.payment_intent as string,
+            paidAt: new Date(),
+          },
+        });
+
+        // 2. 引換券コードを使用済みにする
+        if (order.exchangeCodes) {
+          const codes = order.exchangeCodes.split(',');
+          await tx.exchangeCode.updateMany({
+            where: {
+              code: { in: codes },
+            },
+            data: {
+              isUsed: true,
+              usedAt: new Date(),
+              orderId: order.id,
+            },
+          });
+        }
+
+        // 3. チケットを発行
+        const tickets = [];
+        for (let i = 0; i < order.generalQuantity; i++) {
+          tickets.push({
+            orderId: order.id,
+            ticketCode: crypto.randomUUID(),
+            ticketType: 'GENERAL' as const,
+            isExchanged: i < order.discountedGeneralCount,
+          });
+        }
+        for (let i = 0; i < order.reservedQuantity; i++) {
+          tickets.push({
+            orderId: order.id,
+            ticketCode: crypto.randomUUID(),
+            ticketType: 'RESERVED' as const,
+            isExchanged: false,
+          });
+        }
+        for (let i = 0; i < order.vip1Quantity; i++) {
+          tickets.push({
+            orderId: order.id,
+            ticketCode: crypto.randomUUID(),
+            ticketType: 'VIP1' as const,
+            isExchanged: false,
+          });
+        }
+        for (let i = 0; i < order.vip2Quantity; i++) {
+          tickets.push({
+            orderId: order.id,
+            ticketCode: crypto.randomUUID(),
+            ticketType: 'VIP2' as const,
+            isExchanged: false,
+          });
+        }
+
+        await tx.ticket.createMany({ data: tickets });
+      }, {
+        maxWait: 5000, // トランザクション取得の最大待機時間（ミリ秒）
+        timeout: 10000, // トランザクション実行のタイムアウト（ミリ秒）
       });
 
-      // 引換券コードを使用済みにする
-      if (order.exchangeCodes) {
-        const codes = order.exchangeCodes.split(',');
-        await prisma.exchangeCode.updateMany({
-          where: {
-            code: { in: codes },
-          },
-          data: {
-            isUsed: true,
-            usedAt: new Date(),
-            orderId: order.id,
-          },
-        });
-      }
-
-      // チケットを発行
-      const tickets = [];
-      for (let i = 0; i < order.generalQuantity; i++) {
-        tickets.push({
-          orderId: order.id,
-          ticketCode: crypto.randomUUID(),
-          ticketType: 'GENERAL' as const,
-          isExchanged: i < order.discountedGeneralCount,
-        });
-      }
-      for (let i = 0; i < order.reservedQuantity; i++) {
-        tickets.push({
-          orderId: order.id,
-          ticketCode: crypto.randomUUID(),
-          ticketType: 'RESERVED' as const,
-          isExchanged: false,
-        });
-      }
-      for (let i = 0; i < order.vip1Quantity; i++) {
-        tickets.push({
-          orderId: order.id,
-          ticketCode: crypto.randomUUID(),
-          ticketType: 'VIP1' as const,
-          isExchanged: false,
-        });
-      }
-      for (let i = 0; i < order.vip2Quantity; i++) {
-        tickets.push({
-          orderId: order.id,
-          ticketCode: crypto.randomUUID(),
-          ticketType: 'VIP2' as const,
-          isExchanged: false,
-        });
-      }
-
-      await prisma.ticket.createMany({ data: tickets });
-
-      // チケット情報を取得
+      // チケット情報を取得（トランザクション外で再取得）
       const updatedOrder = await prisma.order.findUnique({
         where: { id: order.id },
         include: { tickets: true },
       });
 
       if (updatedOrder) {
-        // メール送信
-        await sendPurchaseConfirmationEmail(order.customerEmail, {
-          orderId: order.id,
-          performanceLabel: order.performanceLabel || '',
-          performanceDate: order.performanceDate,
-          customerName: order.customerName,
-          totalAmount: order.totalAmount,
-          generalQuantity: order.generalQuantity,
-          reservedQuantity: order.reservedQuantity,
-          tickets: updatedOrder.tickets.map((t) => ({
-            ticketCode: t.ticketCode,
-            ticketType: t.ticketType,
-            isExchanged: t.isExchanged,
-          })),
-        });
+        // メール送信（失敗してもトランザクションはロールバックしない）
+        try {
+          await sendPurchaseConfirmationEmail(order.customerEmail, {
+            orderId: order.id,
+            performanceLabel: order.performanceLabel || '',
+            performanceDate: order.performanceDate,
+            customerName: order.customerName,
+            totalAmount: order.totalAmount,
+            generalQuantity: order.generalQuantity,
+            reservedQuantity: order.reservedQuantity,
+            tickets: updatedOrder.tickets.map((t) => ({
+              ticketCode: t.ticketCode,
+              ticketType: t.ticketType,
+              isExchanged: t.isExchanged,
+            })),
+          });
+        } catch (emailError: any) {
+          // メール送信失敗はログに記録するが、処理は継続
+          logger.error('Email sending failed', {
+            orderId: order.id,
+            error: emailError.message,
+          });
+        }
         
         logger.stripe(event.type, 'processed');
         logger.success('Order completed successfully', {

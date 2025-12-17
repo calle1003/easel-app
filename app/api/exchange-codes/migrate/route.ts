@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     console.log(`Found ${allCodes.length} exchange codes to migrate`);
 
     let migratedCount = 0;
-    const errors = [];
+    const errors: Array<{ code: string; error: string }> = [];
 
     // トランザクションで一括更新
     await prisma.$transaction(async (tx) => {
@@ -72,7 +72,10 @@ export async function POST(request: NextRequest) {
           }
 
           if (attempts >= 20) {
-            errors.push(`Failed to generate unique code for ${exchangeCode.code}`);
+            errors.push({ 
+              code: exchangeCode.code, 
+              error: 'Failed to generate unique code' 
+            });
             continue;
           }
 
@@ -86,7 +89,10 @@ export async function POST(request: NextRequest) {
           migratedCount++;
         } catch (error) {
           console.error(`Error migrating code ${exchangeCode.code}:`, error);
-          errors.push(`Error migrating ${exchangeCode.code}: ${error}`);
+          errors.push({ 
+            code: exchangeCode.code, 
+            error: String(error) 
+          });
         }
       }
     });

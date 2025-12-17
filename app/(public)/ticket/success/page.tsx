@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Ticket as TicketIcon, Mail, Loader2, Gift } from 'lucide-react';
+
+// 動的レンダリングを強制（静的生成を無効化）
+export const dynamic = 'force-dynamic';
 
 interface TicketInfo {
   id: number;
@@ -26,7 +29,7 @@ interface OrderInfo {
   tickets: TicketInfo[];
 }
 
-export default function TicketSuccessPage() {
+function TicketSuccessContent() {
   const searchParams = useSearchParams();
   const [orderInfo, setOrderInfo] = useState<OrderInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -285,5 +288,17 @@ export default function TicketSuccessPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TicketSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      </div>
+    }>
+      <TicketSuccessContent />
+    </Suspense>
   );
 }

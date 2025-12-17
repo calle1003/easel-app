@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -19,7 +21,7 @@ export async function GET() {
 
     return NextResponse.json(performances);
   } catch (error) {
-    console.error('Failed to fetch performances:', error);
+    logger.error('Failed to fetch performances', { error });
     return NextResponse.json(
       { error: 'Failed to fetch performances' },
       { status: 500 }
@@ -27,7 +29,12 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const numberOfShows = body.numberOfShows || 1;
@@ -103,7 +110,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(performance, { status: 201 });
   } catch (error) {
-    console.error('Failed to create performance:', error);
+    logger.error('Failed to create performance', { error });
     return NextResponse.json(
       { error: 'Failed to create performance' },
       { status: 500 }

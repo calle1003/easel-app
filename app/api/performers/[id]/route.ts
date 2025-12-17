@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 // GET: 出演者詳細を取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
-    const id = parseInt(params.id);
+    const { id: idStr } = await params;
+    const id = parseInt(idStr);
 
     const performer = await prisma.performer.findUnique({
       where: { id },
@@ -34,7 +42,7 @@ export async function GET(
 
     return NextResponse.json(performer);
   } catch (error) {
-    console.error('Failed to fetch performer:', error);
+    logger.error('Failed to fetch performer', { error });
     return NextResponse.json(
       { error: 'Failed to fetch performer' },
       { status: 500 }
@@ -45,10 +53,16 @@ export async function GET(
 // PUT: 出演者を更新
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
-    const id = parseInt(params.id);
+    const { id: idStr } = await params;
+    const id = parseInt(idStr);
     const body = await request.json();
     const { name, nameKana, performanceIds } = body;
 
@@ -87,7 +101,7 @@ export async function PUT(
 
     return NextResponse.json(performer);
   } catch (error) {
-    console.error('Failed to update performer:', error);
+    logger.error('Failed to update performer', { error });
     return NextResponse.json(
       { error: 'Failed to update performer' },
       { status: 500 }
@@ -98,10 +112,16 @@ export async function PUT(
 // DELETE: 出演者を削除
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
-    const id = parseInt(params.id);
+    const { id: idStr } = await params;
+    const id = parseInt(idStr);
 
     // 引換券コードが紐づいているか確認
     const exchangeCodeCount = await prisma.exchangeCode.count({
@@ -121,7 +141,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete performer:', error);
+    logger.error('Failed to delete performer', { error });
     return NextResponse.json(
       { error: 'Failed to delete performer' },
       { status: 500 }

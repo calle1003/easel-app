@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireAdmin, handleAuthResult } from '@/lib/admin-auth';
+import { logger } from '@/lib/logger';
 
 // 引換券コード生成関数（英数字5桁のランダム文字列）
 function generateRandomCode(): string {
@@ -18,7 +20,12 @@ function generateExchangeCode(volume: string): string {
 }
 
 // GET: 出演者一覧を取得
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const performers = await prisma.performer.findMany({
       orderBy: { nameKana: 'asc' },
@@ -39,7 +46,7 @@ export async function GET() {
 
     return NextResponse.json(performers);
   } catch (error) {
-    console.error('Failed to fetch performers:', error);
+    logger.error('Failed to fetch performers', { error });
     return NextResponse.json(
       { error: 'Failed to fetch performers' },
       { status: 500 }
@@ -49,6 +56,11 @@ export async function GET() {
 
 // POST: 新規出演者を作成
 export async function POST(request: NextRequest) {
+  // 管理者認証チェック
+  const auth = await requireAdmin(request);
+  const authError = handleAuthResult(auth);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { name, nameKana, performanceIds, codesPerSession = {} } = body;
@@ -148,7 +160,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Failed to create performer:', error);
+    logger.error('Failed to create performer', { error });
     return NextResponse.json(
       { error: 'Failed to create performer' },
       { status: 500 }

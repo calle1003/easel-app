@@ -1,15 +1,14 @@
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
+import { config } from './config';
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-);
+const secret = new TextEncoder().encode(config.jwt.secret);
 
 export async function generateToken(payload: { id: number; email: string; role: string }): Promise<string> {
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('24h')
+    .setExpirationTime(config.jwt.expiresIn)
     .sign(secret);
 
   return token;
@@ -24,8 +23,11 @@ export async function verifyToken(token: string): Promise<{ id: number; email: s
   }
 }
 
+// セキュリティ強化: saltRounds を 12 に変更（2024年推奨値）
+const SALT_ROUNDS = 12;
+
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
+  return bcrypt.hash(password, SALT_ROUNDS);
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {

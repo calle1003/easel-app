@@ -19,7 +19,6 @@ export async function POST() {
       data: {
         title: 'easel live vol.1',
         volume: 'vol1',
-        year: 2025,
         isOnSale: false,
         generalPrice: 4500,
         reservedPrice: 5500,

@@ -41,7 +41,7 @@ function getTransporter() {
 
 export interface TicketInfo {
   ticketCode: string;
-  ticketType: 'GENERAL' | 'RESERVED';
+  ticketType: 'GENERAL' | 'RESERVED' | 'VIP1' | 'VIP2';
   isExchanged: boolean;
 }
 
