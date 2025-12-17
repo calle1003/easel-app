@@ -110,7 +110,15 @@ export default function AdminPerformancesPage() {
       const response = await adminFetch('/api/performances');
       if (response.ok) {
         const data = await response.json();
-        setPerformances(data);
+        // volumeの数値で降順にソート（vol.3 → vol.2 → vol.1）
+        const sortedData = data.sort((a: Performance, b: Performance) => {
+          // volumeから数値を抽出（例: "vol2" → 2）
+          const aNum = a.volume ? parseFloat(a.volume.replace(/[^0-9.]/g, '')) : 0;
+          const bNum = b.volume ? parseFloat(b.volume.replace(/[^0-9.]/g, '')) : 0;
+          // 降順でソート
+          return bNum - aNum;
+        });
+        setPerformances(sortedData);
       }
     } catch (error) {
       console.error('Failed to fetch performances:', error);
@@ -533,9 +541,6 @@ export default function AdminPerformancesPage() {
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-slate-500 mt-3 text-center">
-                    ※ セッションの編集は「公演を編集」から行えます
-                  </p>
                 </div>
               </div>
             ))}
