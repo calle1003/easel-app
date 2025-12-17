@@ -6,7 +6,8 @@ import { ArrowLeft, Plus, Check, X, Copy, Layers, Filter, XCircle } from 'lucide
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 import { Modal } from '@/components/ui/modal';
 
-interface PerformanceSession {
+// 型定義（エクスポート）
+export interface PerformanceSession {
   id: number;
   showNumber: number;
   performanceDate: string;
@@ -15,7 +16,7 @@ interface PerformanceSession {
   saleStatus: string;
 }
 
-interface Performance {
+export interface Performance {
   id: number;
   title: string;
   volume: string | null;
@@ -24,7 +25,7 @@ interface Performance {
   sessions?: PerformanceSession[];
 }
 
-interface Performer {
+export interface Performer {
   id: number;
   name: string;
   nameKana: string | null;
@@ -33,7 +34,7 @@ interface Performer {
   }[];
 }
 
-interface ExchangeCode {
+export interface ExchangeCode {
   id: number;
   code: string;
   performerId: number | null;
@@ -47,6 +48,21 @@ interface ExchangeCode {
   createdAt: string;
   hasAttended: boolean;
   attendedAt: string | null;
+}
+
+// フォームデータの型定義（エクスポート）
+export interface ExchangeCodeFormData {
+  code: string;
+  performerId: string;
+  performanceIds: number[];
+  codesPerSession: Record<number, number>;
+}
+
+// 一括生成データの型定義（エクスポート）
+export interface BatchGenerateData {
+  performerId: string;
+  performanceIds: number[];
+  codesPerSession: Record<number, number>;
 }
 
 export default function AdminExchangeCodesPage() {
@@ -70,17 +86,17 @@ export default function AdminExchangeCodesPage() {
   const [batchModalPerformerSearch, setBatchModalPerformerSearch] = useState<string>('');
   const [showBatchModalPerformerDropdown, setShowBatchModalPerformerDropdown] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ExchangeCodeFormData>({
     code: '',
     performerId: '',
-    performanceIds: [] as number[],
-    codesPerSession: {} as Record<number, number>,
+    performanceIds: [],
+    codesPerSession: {},
   });
   const [generatingBatch, setGeneratingBatch] = useState(false);
-  const [batchData, setBatchData] = useState({
+  const [batchData, setBatchData] = useState<BatchGenerateData>({
     performerId: '',
-    performanceIds: [] as number[],
-    codesPerSession: {} as Record<number, number>,
+    performanceIds: [],
+    codesPerSession: {},
   });
 
   useEffect(() => {

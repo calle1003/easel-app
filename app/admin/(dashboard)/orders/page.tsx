@@ -17,10 +17,10 @@ import {
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 
 // ============================================
-// 型定義
+// 型定義（エクスポート）
 // ============================================
 
-interface TicketInfo {
+export interface TicketInfo {
   id: number;
   ticketCode: string;
   ticketType: 'GENERAL' | 'RESERVED';
@@ -30,12 +30,12 @@ interface TicketInfo {
   createdAt: string;
 }
 
-interface ExchangeCode {
+export interface ExchangeCode {
   code: string;
   usedAt: string;
 }
 
-interface Order {
+export interface Order {
   id: number;
   stripeSessionId: string;
   performanceDate: string;

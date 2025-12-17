@@ -6,12 +6,20 @@ import { ArrowLeft, Pencil, Trash2, Plus } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 import { Modal } from '@/components/ui/modal';
 
-interface News {
+// 型定義（エクスポート）
+export interface News {
   id: number;
   title: string;
   content: string;
   publishedAt: Date;
   category: string | null;
+}
+
+// フォームデータの型定義（エクスポート）
+export interface NewsFormData {
+  title: string;
+  content: string;
+  category: string;
 }
 
 export default function AdminNewsPage() {
@@ -20,7 +28,7 @@ export default function AdminNewsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<NewsFormData>({
     title: '',
     content: '',
     category: '',

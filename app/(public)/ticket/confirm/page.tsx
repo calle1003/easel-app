@@ -161,7 +161,7 @@ export default function TicketConfirmPage() {
                 <div className="flex justify-between">
                   <span className="text-slate-500">一般席（自由席）</span>
                   <span className="text-slate-700">
-                    {generalQuantity}枚 × ¥{generalPrice.toLocaleString()}
+                  ¥{generalPrice.toLocaleString()} × {generalQuantity}枚
                   </span>
                 </div>
               )}
@@ -169,7 +169,7 @@ export default function TicketConfirmPage() {
                 <div className="flex justify-between">
                   <span className="text-slate-500">指定席</span>
                   <span className="text-slate-700">
-                    {reservedQuantity}枚 × ¥{reservedPrice.toLocaleString()}
+                  ¥{reservedPrice.toLocaleString()} × {reservedQuantity}枚
                   </span>
                 </div>
               )}

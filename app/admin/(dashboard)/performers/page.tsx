@@ -6,7 +6,8 @@ import { ArrowLeft, Pencil, Trash2, Plus, User, Filter, XCircle, Upload } from '
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 import { Modal } from '@/components/ui/modal';
 
-interface PerformanceSession {
+// 型定義（エクスポート）
+export interface PerformanceSession {
   id: number;
   showNumber: number;
   performanceDate: string;
@@ -14,7 +15,7 @@ interface PerformanceSession {
   venueName: string;
 }
 
-interface Performance {
+export interface Performance {
   id: number;
   title: string;
   volume: string | null;
@@ -23,7 +24,7 @@ interface Performance {
   sessions?: PerformanceSession[];
 }
 
-interface Performer {
+export interface Performer {
   id: number;
   name: string;
   nameKana: string | null;
@@ -37,6 +38,20 @@ interface Performer {
   };
 }
 
+// フォームデータの型定義（エクスポート）
+export interface PerformerFormData {
+  name: string;
+  nameKana: string;
+  performanceIds: number[];
+  codesPerSession: Record<number, number>;
+}
+
+// CSV一括登録データの型定義（エクスポート）
+export interface CsvPerformerData {
+  name: string;
+  nameKana: string;
+}
+
 export default function AdminPerformersPage() {
   const { adminFetch } = useAdminUser();
   const [performers, setPerformers] = useState<Performer[]>([]);
@@ -48,16 +63,16 @@ export default function AdminPerformersPage() {
   const [filterPerformanceIds, setFilterPerformanceIds] = useState<number[]>([]);
   const [performanceSearchText, setPerformanceSearchText] = useState<string>('');
   const [showPerformanceDropdown, setShowPerformanceDropdown] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PerformerFormData>({
     name: '',
     nameKana: '',
-    performanceIds: [] as number[],
-    codesPerSession: {} as Record<number, number>,
+    performanceIds: [],
+    codesPerSession: {},
   });
   
   // CSV一括登録用の状態
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvData, setCsvData] = useState<{ name: string; nameKana: string }[]>([]);
+  const [csvData, setCsvData] = useState<CsvPerformerData[]>([]);
   const [batchPerformanceIds, setBatchPerformanceIds] = useState<number[]>([]);
   const [codesPerSession, setCodesPerSession] = useState<Record<number, number>>({});
   const [uploading, setUploading] = useState(false);
