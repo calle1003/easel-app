@@ -84,6 +84,18 @@ export const logger = {
     );
   },
   
+  // ページリクエスト専用
+  page: (method: string, path: string, duration: number) => {
+    const timestamp = formatTimestamp();
+    console.log(
+      `${colors.dim}[${timestamp}]${colors.reset} ` +
+      `${colors.bold}🌐PAGE${colors.reset} ` +
+      `${colors.bold}${method}${colors.reset} ` +
+      `${path} ` +
+      `${colors.dim}(middleware: ${duration}ms)${colors.reset}`
+    );
+  },
+  
   // Email送信専用
   email: (to: string, subject: string, status: 'sent' | 'failed') => {
     const icon = status === 'sent' ? '📧' : '❌';

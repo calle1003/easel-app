@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { logger } from '@/lib/logger';
 
 export function middleware(request: NextRequest) {
   const start = Date.now();
@@ -19,41 +20,19 @@ export function middleware(request: NextRequest) {
   
   // 開発環境でのみログ出力
   if (process.env.NODE_ENV === 'development') {
-    // レスポンス後にログを出力するためのヘッダーを追加
-    response.headers.set('x-middleware-start', String(start));
-    
     const duration = Date.now() - start;
     const method = request.method;
     
-    // カラーコード
-    const reset = '\x1b[0m';
-    const dim = '\x1b[2m';
-    const bold = '\x1b[1m';
-    const cyan = '\x1b[36m';
-    
-    // 日付フォーマット
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    
     // APIリクエストかページリクエストか判定
     const isApi = pathname.startsWith('/api');
-    const icon = isApi ? '🔷' : '🌐';
-    const type = isApi ? 'API' : 'PAGE';
     
-    // ログ出力（Next.jsのデフォルトログの前に出力）
-    console.log(
-      `${dim}[${timestamp}]${reset} ` +
-      `${cyan}${bold}${icon}${type}${reset} ` +
-      `${bold}${method}${reset} ` +
-      `${pathname} ` +
-      `${dim}(middleware: ${duration}ms)${reset}`
-    );
+    if (isApi) {
+      // APIリクエストはlogger.apiを使用（200ステータスを仮定）
+      logger.api(method, pathname, 200, duration);
+    } else {
+      // ページリクエストはlogger.pageを使用
+      logger.page(method, pathname, duration);
+    }
   }
   
   return response;

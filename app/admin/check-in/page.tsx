@@ -65,7 +65,6 @@ export default function AdminCheckInPage() {
 
   // カメラ初期化
   useEffect(() => {
-    console.log('Camera mode changed, isManualMode:', isManualMode);
     if (!isManualMode) {
       startCamera();
     } else {
@@ -73,7 +72,6 @@ export default function AdminCheckInPage() {
       void stopCamera();
     }
     return () => {
-      console.log('Camera useEffect cleanup');
       void stopCamera();
     };
   }, [isManualMode]);
@@ -82,21 +80,17 @@ export default function AdminCheckInPage() {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.hidden) {
-        console.log('Page hidden, stopping camera');
         await stopCamera();
       } else if (!isManualMode && scanStatus === 'idle') {
-        console.log('Page visible, restarting camera');
         startCamera();
       }
     };
 
     const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      console.log('Page unloading, stopping camera');
       await stopCamera();
     };
 
     const handlePopState = async () => {
-      console.log('Browser back/forward button pressed, stopping camera');
       await stopCamera();
     };
 
@@ -104,11 +98,9 @@ export default function AdminCheckInPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange as any);
     window.addEventListener('beforeunload', handleBeforeUnload as any);
     window.addEventListener('pagehide', handleBeforeUnload as any);
-    window.addEventListener('popstate', handlePopState); // ブラウザの戻る/進むボタン
+    window.addEventListener('popstate', handlePopState);
 
     return () => {
-      // クリーンアップ：必ずカメラを停止
-      console.log('Component unmounting, stopping camera');
       document.removeEventListener('visibilitychange', handleVisibilityChange as any);
       window.removeEventListener('beforeunload', handleBeforeUnload as any);
       window.removeEventListener('pagehide', handleBeforeUnload as any);
@@ -132,7 +124,6 @@ export default function AdminCheckInPage() {
   const startCamera = async () => {
     try {
       // 既存のカメラストリームを先に停止
-      console.log('startCamera: Cleaning up any existing streams first');
       await stopCamera();
       
       if (!videoRef.current) {
@@ -143,8 +134,6 @@ export default function AdminCheckInPage() {
       setCameraError('');
       setIsCameraReady(false);
 
-      console.log('Starting camera...');
-
       // navigator.mediaDevicesが利用可能かチェック
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         console.error('navigator.mediaDevices is not available');
@@ -154,13 +143,11 @@ export default function AdminCheckInPage() {
 
       // まずカメラ権限をリクエスト（背面カメラを優先、なければ前面カメラ）
       try {
-        console.log('Requesting camera permission...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             facingMode: { ideal: 'environment' } // 背面カメラを優先（必須ではない）
           } 
         });
-        console.log('Camera permission granted');
         // 権限確認後、ストリームを停止（後でQRCodeReaderが再度起動）
         stream.getTracks().forEach(track => track.stop());
       } catch (permError: any) {
@@ -174,7 +161,6 @@ export default function AdminCheckInPage() {
           return;
         } else if (permError.name === 'OverconstrainedError' || permError.name === 'ConstraintNotSatisfiedError') {
           // 制約エラー: 制約なしで再試行
-          console.log('Retrying without constraints...');
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             stream.getTracks().forEach(track => track.stop());
@@ -194,13 +180,7 @@ export default function AdminCheckInPage() {
       const codeReader = new BrowserQRCodeReader();
       codeReaderRef.current = codeReader;
 
-      console.log('Requesting video input devices...');
       const videoInputDevices = await BrowserQRCodeReader.listVideoInputDevices();
-      
-      console.log('Found devices:', videoInputDevices.length);
-      videoInputDevices.forEach((device: any, index: number) => {
-        console.log(`Device ${index}:`, device.label, device.deviceId);
-      });
       
       if (videoInputDevices.length === 0) {
         setCameraError('カメラが見つかりません。デバイスにカメラが接続されているか確認してください。');
@@ -229,15 +209,12 @@ export default function AdminCheckInPage() {
         backCamera = videoInputDevices[videoInputDevices.length - 1];
       }
 
-      console.log('Selected camera:', backCamera.label, backCamera.deviceId);
-
       // decodeFromVideoDeviceの戻り値（controls）を保存
       const controls = await codeReader.decodeFromVideoDevice(
         backCamera.deviceId,
         videoRef.current,
         (result: any) => {
           if (result) {
-            console.log('QR Code detected:', result.getText());
             const ticketCode = result.getText();
             handleScan(ticketCode);
           }
@@ -245,7 +222,7 @@ export default function AdminCheckInPage() {
         }
       );
       
-      // controlsオブジェクトを保存（stop()メソッドを持つ）
+      // controlsオブジェクトを保存
       scanControlsRef.current = controls;
       
       // MediaStreamへの参照を保存（少し待機してから）
@@ -259,11 +236,6 @@ export default function AdminCheckInPage() {
 
     } catch (error: any) {
       console.error('Camera error:', error);
-      console.error('Error details:', {
-        name: error?.name,
-        message: error?.message,
-        stack: error?.stack
-      });
       
       let errorMsg = 'カメラの起動に失敗しました';
       
