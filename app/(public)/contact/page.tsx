@@ -55,7 +55,7 @@ export default function ContactPage() {
       <section className="py-20 px-6 bg-white">
         <div className="max-w-xl mx-auto">
           <p className="text-center text-slate-500 mb-14">
-            easelへのお問い合わせは、下記フォームよりお送りください。
+            お問い合わせは、下記フォームよりお送りください。
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-8">

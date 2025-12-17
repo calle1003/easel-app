@@ -8,12 +8,6 @@ import { revalidatePath } from 'next/cache';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-// Stripe Price IDs (ダッシュボードで作成済み)
-const GENERAL_PRICE_ID = 'price_1SbHIbHrC5XXQaL8fYhk5udi';
-const RESERVED_PRICE_ID = 'price_1SbHHCHrC5XXQaL81l7vjRAq';
-const VIP1_PRICE_ID = process.env.STRIPE_VIP1_PRICE_ID || 'price_1SeaStHrC5XXQaL81kMxdxRX';
-const VIP2_PRICE_ID = process.env.STRIPE_VIP2_PRICE_ID || 'price_1SeaTNHrC5XXQaL8IDxk9BLP';
-
 export async function createCheckoutSession(
   request: CheckoutRequest
 ): Promise<{ success: true; data: CheckoutResponse } | { success: false; error: string }> {
@@ -119,34 +113,66 @@ export async function createCheckoutSession(
       });
     }
 
-    // 一般席（有料分）- 既存の価格IDを使用
+    // 一般席（有料分）- 管理画面の価格を使用
     if (chargeableGeneralQuantity > 0) {
       lineItems.push({
-        price: GENERAL_PRICE_ID,
+        price_data: {
+          currency: 'jpy',
+          unit_amount: performance.generalPrice,
+          product_data: {
+            name: `${performance.title} 一般席`,
+            description: `公演日: ${performanceSession.performanceDate.toISOString().split('T')[0]}`,
+          },
+        },
         quantity: chargeableGeneralQuantity,
       });
     }
 
-    // 指定席 - 既存の価格IDを使用
+    // 指定席 - 管理画面の価格を使用
     if (request.reservedQuantity > 0) {
       lineItems.push({
-        price: RESERVED_PRICE_ID,
+        price_data: {
+          currency: 'jpy',
+          unit_amount: performance.reservedPrice,
+          product_data: {
+            name: `${performance.title} 指定席`,
+            description: `公演日: ${performanceSession.performanceDate.toISOString().split('T')[0]}`,
+          },
+        },
         quantity: request.reservedQuantity,
       });
     }
 
-    // VIP①席
-    if (vip1Qty > 0) {
+    // VIP①席 - 管理画面の価格を使用
+    if (vip1Qty > 0 && performance.vip1Price) {
       lineItems.push({
-        price: VIP1_PRICE_ID,
+        price_data: {
+          currency: 'jpy',
+          unit_amount: performance.vip1Price,
+          product_data: {
+            name: `${performance.title} VIP①席`,
+            description: performance.vip1Note 
+              ? `${performance.vip1Note} | 公演日: ${performanceSession.performanceDate.toISOString().split('T')[0]}`
+              : `公演日: ${performanceSession.performanceDate.toISOString().split('T')[0]}`,
+          },
+        },
         quantity: vip1Qty,
       });
     }
 
-    // VIP②席
-    if (vip2Qty > 0) {
+    // VIP②席 - 管理画面の価格を使用
+    if (vip2Qty > 0 && performance.vip2Price) {
       lineItems.push({
-        price: VIP2_PRICE_ID,
+        price_data: {
+          currency: 'jpy',
+          unit_amount: performance.vip2Price,
+          product_data: {
+            name: `${performance.title} VIP②席`,
+            description: performance.vip2Note 
+              ? `${performance.vip2Note} | 公演日: ${performanceSession.performanceDate.toISOString().split('T')[0]}`
+              : `公演日: ${performanceSession.performanceDate.toISOString().split('T')[0]}`,
+          },
+        },
         quantity: vip2Qty,
       });
     }

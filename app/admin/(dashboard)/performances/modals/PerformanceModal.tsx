@@ -226,6 +226,7 @@ export function PerformanceModal({
                     <label className="block text-xs text-slate-500 mb-1">開演時刻</label>
                     <input
                       type="time"
+                      step="900"
                       value={session.performanceTime}
                       onChange={(e) => {
                         const newData = [...sessionsDatesData];
@@ -240,6 +241,7 @@ export function PerformanceModal({
                     <label className="block text-xs text-slate-500 mb-1">開場時刻</label>
                     <input
                       type="time"
+                      step="900"
                       value={session.doorsOpenTime}
                       onChange={(e) => {
                         const newData = [...sessionsDatesData];

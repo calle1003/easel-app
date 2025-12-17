@@ -467,21 +467,17 @@ export default function TicketPurchasePage() {
                   <p className="text-sm text-slate-600">
                     📍 {selectedPerformance.venueName}
                   </p>
-                  <div className="text-sm text-slate-500 mt-1 space-y-1">
+                  <div className="text-sm text-slate-500 mt-1">
                     <p>
                       残席: 一般席 <span className="font-medium text-slate-700">{generalRemaining}</span>枚 / 
                       指定席 <span className="font-medium text-slate-700">{reservedRemaining}</span>枚
+                      {(selectedPerformance.vip1Price && vip1Remaining > 0) && (
+                        <> / VIP①席 <span className="font-medium text-slate-700">{vip1Remaining}</span>枚</>
+                      )}
+                      {(selectedPerformance.vip2Price && vip2Remaining > 0) && (
+                        <> / VIP②席 <span className="font-medium text-slate-700">{vip2Remaining}</span>枚</>
+                      )}
                     </p>
-                    {(selectedPerformance.vip1Price && vip1Remaining > 0) && (
-                      <p className="text-amber-700">
-                        VIP①席 <span className="font-medium">{vip1Remaining}</span>枚
-                      </p>
-                    )}
-                    {(selectedPerformance.vip2Price && vip2Remaining > 0) && (
-                      <p className="text-purple-700">
-                        VIP②席 <span className="font-medium">{vip2Remaining}</span>枚
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
@@ -701,86 +697,82 @@ export default function TicketPurchasePage() {
 
                 {/* VIP① */}
                 {selectedPerformance?.vip1Price && vip1Remaining > 0 && (
-                  <div className="border border-amber-200 rounded-lg overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50">
-                    <div className="flex items-center justify-between p-5">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-slate-700 font-medium">VIP①席</p>
-                          <span className="px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded">特典付き</span>
-                        </div>
-                        <p className="text-sm text-amber-700 mt-1">
-                          ¥{vip1Price.toLocaleString()} / 枚
+                  <div className="flex items-center justify-between p-5 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-slate-700 font-medium">VIP①席</p>
+                        <span className="px-2 py-0.5 text-xs font-medium text-slate-600 bg-slate-100 rounded">特典付き</span>
+                      </div>
+                      <p className="text-sm text-slate-400">
+                        ¥{vip1Price.toLocaleString()} / 枚
+                      </p>
+                      {selectedPerformance.vip1Note && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {selectedPerformance.vip1Note}
                         </p>
-                        {selectedPerformance.vip1Note && (
-                          <p className="text-xs text-amber-600 mt-2">
-                            {selectedPerformance.vip1Note}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('vip1', -1)}
-                          disabled={vip1Quantity === 0 || !selectedPerformance}
-                          className="p-2 border border-amber-300 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Minus size={16} className="text-amber-700" />
-                        </button>
-                        <span className="w-8 text-center text-lg text-amber-800 font-medium">
-                          {vip1Quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('vip1', 1)}
-                          disabled={!selectedPerformance || vip1Quantity >= Math.min(vip1Remaining, 10)}
-                          className="p-2 border border-amber-300 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus size={16} className="text-amber-700" />
-                        </button>
-                      </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange('vip1', -1)}
+                        disabled={vip1Quantity === 0 || !selectedPerformance}
+                        className="p-2 border border-slate-200 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Minus size={16} className="text-slate-500" />
+                      </button>
+                      <span className="w-8 text-center text-lg text-slate-700">
+                        {vip1Quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange('vip1', 1)}
+                        disabled={!selectedPerformance || vip1Quantity >= Math.min(vip1Remaining, 10)}
+                        className="p-2 border border-slate-200 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus size={16} className="text-slate-500" />
+                      </button>
                     </div>
                   </div>
                 )}
 
                 {/* VIP② */}
                 {selectedPerformance?.vip2Price && vip2Remaining > 0 && (
-                  <div className="border border-purple-200 rounded-lg overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50">
-                    <div className="flex items-center justify-between p-5">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-slate-700 font-medium">VIP②席</p>
-                          <span className="px-2 py-0.5 text-xs font-medium text-purple-700 bg-purple-100 rounded">特典付き</span>
-                        </div>
-                        <p className="text-sm text-purple-700 mt-1">
-                          ¥{vip2Price.toLocaleString()} / 枚
+                  <div className="flex items-center justify-between p-5 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-slate-700 font-medium">VIP②席</p>
+                        <span className="px-2 py-0.5 text-xs font-medium text-slate-600 bg-slate-100 rounded">特典付き</span>
+                      </div>
+                      <p className="text-sm text-slate-400">
+                        ¥{vip2Price.toLocaleString()} / 枚
+                      </p>
+                      {selectedPerformance.vip2Note && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {selectedPerformance.vip2Note}
                         </p>
-                        {selectedPerformance.vip2Note && (
-                          <p className="text-xs text-purple-600 mt-2">
-                            {selectedPerformance.vip2Note}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('vip2', -1)}
-                          disabled={vip2Quantity === 0 || !selectedPerformance}
-                          className="p-2 border border-purple-300 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Minus size={16} className="text-purple-700" />
-                        </button>
-                        <span className="w-8 text-center text-lg text-purple-800 font-medium">
-                          {vip2Quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange('vip2', 1)}
-                          disabled={!selectedPerformance || vip2Quantity >= Math.min(vip2Remaining, 10)}
-                          className="p-2 border border-purple-300 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Plus size={16} className="text-purple-700" />
-                        </button>
-                      </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange('vip2', -1)}
+                        disabled={vip2Quantity === 0 || !selectedPerformance}
+                        className="p-2 border border-slate-200 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Minus size={16} className="text-slate-500" />
+                      </button>
+                      <span className="w-8 text-center text-lg text-slate-700">
+                        {vip2Quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange('vip2', 1)}
+                        disabled={!selectedPerformance || vip2Quantity >= Math.min(vip2Remaining, 10)}
+                        className="p-2 border border-slate-200 rounded-full hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus size={16} className="text-slate-500" />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -852,13 +844,13 @@ export default function TicketPurchasePage() {
                   </div>
                 )}
                 {vip1Quantity > 0 && (
-                  <div className="flex items-center justify-between text-amber-700">
+                  <div className="flex items-center justify-between text-slate-500">
                     <span>VIP①席 ¥{vip1Price.toLocaleString()} × {vip1Quantity}枚</span>
                     <span>¥{calculations.vip1Total.toLocaleString()}</span>
                   </div>
                 )}
                 {vip2Quantity > 0 && (
-                  <div className="flex items-center justify-between text-purple-700">
+                  <div className="flex items-center justify-between text-slate-500">
                     <span>VIP②席 ¥{vip2Price.toLocaleString()} × {vip2Quantity}枚</span>
                     <span>¥{calculations.vip2Total.toLocaleString()}</span>
                   </div>

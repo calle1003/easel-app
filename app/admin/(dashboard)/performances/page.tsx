@@ -177,29 +177,72 @@ export default function AdminPerformancesPage() {
     // 既存セッションデータを読み込む
     setSessionsDatesData(
       perf.sessions.map(session => {
+        // 日付データの変換（YYYY-MM-DD形式に）
+        let dateValue = '';
+        if (session.performanceDate) {
+          const perfDate = session.performanceDate as any;
+          if (typeof perfDate === 'string') {
+            // 既にYYYY-MM-DD形式の場合
+            if (perfDate.includes('-')) {
+              dateValue = perfDate.split('T')[0];
+            } else {
+              dateValue = perfDate;
+            }
+          } else if (perfDate instanceof Date) {
+            // Date型の場合
+            dateValue = perfDate.toISOString().split('T')[0];
+          } else {
+            // その他の形式の場合
+            const date = new Date(perfDate);
+            if (!isNaN(date.getTime())) {
+              dateValue = date.toISOString().split('T')[0];
+            }
+          }
+        }
+        
         // 時刻データの変換
         let timeValue = '';
-        if (typeof session.performanceTime === 'string') {
-          if (session.performanceTime.includes('T')) {
-            timeValue = session.performanceTime.split('T')[1].slice(0, 5);
+        if (session.performanceTime) {
+          const perfTime = session.performanceTime as any;
+          if (typeof perfTime === 'string') {
+            if (perfTime.includes('T')) {
+              timeValue = perfTime.split('T')[1].slice(0, 5);
+            } else {
+              timeValue = perfTime.slice(0, 5);
+            }
+          } else if (perfTime instanceof Date) {
+            timeValue = perfTime.toTimeString().slice(0, 5);
           } else {
-            timeValue = session.performanceTime.slice(0, 5);
+            const time = new Date(perfTime);
+            if (!isNaN(time.getTime())) {
+              timeValue = time.toTimeString().slice(0, 5);
+            }
           }
         }
         
         let doorsValue = '';
-        if (session.doorsOpenTime && typeof session.doorsOpenTime === 'string') {
-          if (session.doorsOpenTime.includes('T')) {
-            doorsValue = session.doorsOpenTime.split('T')[1].slice(0, 5);
+        if (session.doorsOpenTime) {
+          const doorsTime = session.doorsOpenTime as any;
+          if (typeof doorsTime === 'string') {
+            if (doorsTime.includes('T')) {
+              doorsValue = doorsTime.split('T')[1].slice(0, 5);
+            } else {
+              doorsValue = doorsTime.slice(0, 5);
+            }
+          } else if (doorsTime instanceof Date) {
+            doorsValue = doorsTime.toTimeString().slice(0, 5);
           } else {
-            doorsValue = session.doorsOpenTime.slice(0, 5);
+            const time = new Date(doorsTime);
+            if (!isNaN(time.getTime())) {
+              doorsValue = time.toTimeString().slice(0, 5);
+            }
           }
         }
         
         return {
           id: session.id,
           showNumber: session.showNumber,
-          performanceDate: session.performanceDate,
+          performanceDate: dateValue,
           performanceTime: timeValue,
           doorsOpenTime: doorsValue,
           generalCapacity: session.generalCapacity,
