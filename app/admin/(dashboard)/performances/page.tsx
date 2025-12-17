@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Pencil, Trash2, Plus, Calendar, Clock, MapPin } from 'lucide-react';
 import { useAdminUser } from '@/components/admin/AdminAuthProvider';
-import { PerformanceModal } from './modals/PerformanceModal';
-import { SessionModal } from './modals/SessionModal';
-import { DetailModal } from './modals/DetailModal';
+import { PerformanceModal, PerformanceFormData, SessionDateData } from './modals/PerformanceModal';
+import { SessionModal, SessionFormData } from './modals/SessionModal';
+import { DetailModal, DetailFormData } from './modals/DetailModal';
 
 interface PerformanceSession {
   id: number;
@@ -64,7 +64,7 @@ export default function AdminPerformancesPage() {
   const [selectedPerformanceId, setSelectedPerformanceId] = useState<number | null>(null);
   const [editingDetailPerformanceId, setEditingDetailPerformanceId] = useState<number | null>(null);
   
-  const [performanceFormData, setPerformanceFormData] = useState({
+  const [performanceFormData, setPerformanceFormData] = useState<PerformanceFormData>({
     title: '',
     volume: '',
     isOnSale: false,
@@ -81,27 +81,22 @@ export default function AdminPerformancesPage() {
     description: '',
   });
 
-  const [sessionsDatesData, setSessionsDatesData] = useState<Array<{
-    showNumber: number;
-    performanceDate: string;
-    performanceTime: string;
-    doorsOpenTime: string;
-  }>>([
+  const [sessionsDatesData, setSessionsDatesData] = useState<SessionDateData[]>([
     { showNumber: 1, performanceDate: '', performanceTime: '', doorsOpenTime: '' }
   ]);
 
-  const [detailFormData, setDetailFormData] = useState({
-    flyerImages: [] as Array<{ url: string; name: string }>,
-    painters: [] as Array<{ name: string; instagram?: string }>,
-    choreographers: [] as Array<{ name: string; instagram?: string; company?: string }>,
-    navigators: [] as Array<{ name: string; instagram?: string; company?: string }>,
-    guestDancers: [] as Array<{ name: string; instagram?: string; company?: string }>,
-    staff: [] as Array<{ role: string; name: string; instagram?: string; company?: string }>,
+  const [detailFormData, setDetailFormData] = useState<DetailFormData>({
+    flyerImages: [],
+    painters: [],
+    choreographers: [],
+    navigators: [],
+    guestDancers: [],
+    staff: [],
   });
 
   const [uploadingImageIndex, setUploadingImageIndex] = useState<number | null>(null);
 
-  const [sessionFormData, setSessionFormData] = useState({
+  const [sessionFormData, setSessionFormData] = useState<SessionFormData>({
     showNumber: '',
     performanceDate: '',
     performanceTime: '',
@@ -118,21 +113,6 @@ export default function AdminPerformancesPage() {
   useEffect(() => {
     fetchPerformances();
   }, [adminFetch]);
-
-  // 公演回数が変更されたらセッション日時フォームを更新
-  useEffect(() => {
-    const newSessionsData = [];
-    for (let i = 1; i <= performanceFormData.numberOfShows; i++) {
-      const existing = sessionsDatesData[i - 1];
-      newSessionsData.push({
-        showNumber: i,
-        performanceDate: existing?.performanceDate || '',
-        performanceTime: existing?.performanceTime || '',
-        doorsOpenTime: existing?.doorsOpenTime || '',
-      });
-    }
-    setSessionsDatesData(newSessionsData);
-  }, [performanceFormData.numberOfShows]);
 
   const fetchPerformances = async () => {
     try {

@@ -2,24 +2,27 @@
 
 import { Modal } from '@/components/ui/modal';
 
+// セッションフォームのデータ型定義（エクスポート）
+export interface SessionFormData {
+  showNumber: string;
+  performanceDate: string;
+  performanceTime: string;
+  doorsOpenTime: string;
+  venueName: string;
+  venueAddress: string;
+  venueAccess: string;
+  generalCapacity: number;
+  reservedCapacity: number;
+  vip1Capacity: number;
+  vip2Capacity: number;
+}
+
 interface SessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingSessionId: number | null;
-  sessionFormData: {
-    showNumber: string;
-    performanceDate: string;
-    performanceTime: string;
-    doorsOpenTime: string;
-    venueName: string;
-    venueAddress: string;
-    venueAccess: string;
-    generalCapacity: number;
-    reservedCapacity: number;
-    vip1Capacity: number;
-    vip2Capacity: number;
-  };
-  setSessionFormData: (data: any) => void;
+  sessionFormData: SessionFormData;
+  setSessionFormData: (data: SessionFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -42,10 +45,13 @@ export function SessionModal({
         <div>
           <label className="block text-sm text-slate-600 mb-1">公演回数</label>
           <input
-            type="number"
-            min="1"
-            value={sessionFormData.showNumber}
-            onChange={(e) => setSessionFormData({ ...sessionFormData, showNumber: e.target.value })}
+            type="text"
+            inputMode="numeric"
+            value={sessionFormData.showNumber || ''}
+            onChange={(e) => {
+              const value = e.target.value.replace(/[^0-9]/g, '');
+              setSessionFormData({ ...sessionFormData, showNumber: value === '' ? '' : value });
+            }}
             className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
             placeholder="1"
             required
@@ -91,10 +97,10 @@ export function SessionModal({
             <input
               type="text"
               inputMode="numeric"
-              value={sessionFormData.generalCapacity}
+              value={sessionFormData.generalCapacity || ''}
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9]/g, '');
-                setSessionFormData({ ...sessionFormData, generalCapacity: parseInt(value, 10) || 0 });
+                setSessionFormData({ ...sessionFormData, generalCapacity: value === '' ? 0 : parseInt(value, 10) });
               }}
               className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
               required
@@ -105,10 +111,10 @@ export function SessionModal({
             <input
               type="text"
               inputMode="numeric"
-              value={sessionFormData.reservedCapacity}
+              value={sessionFormData.reservedCapacity || ''}
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9]/g, '');
-                setSessionFormData({ ...sessionFormData, reservedCapacity: parseInt(value, 10) || 0 });
+                setSessionFormData({ ...sessionFormData, reservedCapacity: value === '' ? 0 : parseInt(value, 10) });
               }}
               className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
               required
@@ -125,10 +131,10 @@ export function SessionModal({
               <input
                 type="text"
                 inputMode="numeric"
-                value={sessionFormData.vip1Capacity}
+                value={sessionFormData.vip1Capacity || ''}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9]/g, '');
-                  setSessionFormData({ ...sessionFormData, vip1Capacity: parseInt(value, 10) || 0 });
+                  setSessionFormData({ ...sessionFormData, vip1Capacity: value === '' ? 0 : parseInt(value, 10) });
                 }}
                 className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                 placeholder="0"
@@ -139,10 +145,10 @@ export function SessionModal({
               <input
                 type="text"
                 inputMode="numeric"
-                value={sessionFormData.vip2Capacity}
+                value={sessionFormData.vip2Capacity || ''}
                 onChange={(e) => {
                   const value = e.target.value.replace(/[^0-9]/g, '');
-                  setSessionFormData({ ...sessionFormData, vip2Capacity: parseInt(value, 10) || 0 });
+                  setSessionFormData({ ...sessionFormData, vip2Capacity: value === '' ? 0 : parseInt(value, 10) });
                 }}
                 className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                 placeholder="0"

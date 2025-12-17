@@ -2,34 +2,39 @@
 
 import { Modal } from '@/components/ui/modal';
 
+// 型定義を分離して管理しやすくします
+export interface PerformanceFormData {
+  title: string;
+  volume: string;
+  isOnSale: boolean;
+  numberOfShows: number | ''; // 入力中の空文字を許容
+  venueName: string;
+  venueAddress: string;
+  venueAccess: string;
+  generalPrice: number;
+  reservedPrice: number;
+  vip1Price: number;
+  vip2Price: number;
+  vip1Note: string;
+  vip2Note: string;
+  description: string;
+}
+
+export interface SessionDateData {
+  showNumber: number;
+  performanceDate: string;
+  performanceTime: string;
+  doorsOpenTime: string;
+}
+
 interface PerformanceModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingPerformanceId: number | null;
-  performanceFormData: {
-    title: string;
-    volume: string;
-    isOnSale: boolean;
-    numberOfShows: number;
-    venueName: string;
-    venueAddress: string;
-    venueAccess: string;
-    generalPrice: number;
-    reservedPrice: number;
-    vip1Price: number;
-    vip2Price: number;
-    vip1Note: string;
-    vip2Note: string;
-    description: string;
-  };
-  setPerformanceFormData: (data: any) => void;
-  sessionsDatesData: Array<{
-    showNumber: number;
-    performanceDate: string;
-    performanceTime: string;
-    doorsOpenTime: string;
-  }>;
-  setSessionsDatesData: (data: any) => void;
+  performanceFormData: PerformanceFormData;
+  setPerformanceFormData: (data: PerformanceFormData) => void;
+  sessionsDatesData: SessionDateData[];
+  setSessionsDatesData: (data: SessionDateData[]) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -43,6 +48,45 @@ export function PerformanceModal({
   setSessionsDatesData,
   onSubmit,
 }: PerformanceModalProps) {
+
+  // 公演回数が変更された時に、セッションデータ配列も同期してリサイズするハンドラ
+  const handleNumberOfShowsChange = (value: string) => {
+    // 数値以外の文字を除去
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    if (numericValue === '') {
+      setPerformanceFormData({ ...performanceFormData, numberOfShows: '' });
+      return;
+    }
+
+    const num = parseInt(numericValue, 10);
+    
+    // 1〜20回の制限（バリデーション）
+    if (num >= 1 && num <= 20) {
+      setPerformanceFormData({ ...performanceFormData, numberOfShows: num });
+
+      // 既存のセッション配列をコピー
+      const newSessions = [...sessionsDatesData];
+
+      if (num > newSessions.length) {
+        // 増えた分を追加（初期値セット）
+        for (let i = newSessions.length; i < num; i++) {
+          newSessions.push({
+            showNumber: i + 1,
+            performanceDate: '',
+            performanceTime: '',
+            doorsOpenTime: '',
+          });
+        }
+      } else if (num < newSessions.length) {
+        // 減った分を削除
+        newSessions.splice(num);
+      }
+      
+      setSessionsDatesData(newSessions);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -87,17 +131,7 @@ export function PerformanceModal({
               type="text"
               inputMode="numeric"
               value={performanceFormData.numberOfShows}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                if (value === '') {
-                  setPerformanceFormData({ ...performanceFormData, numberOfShows: 1 });
-                } else {
-                  const num = parseInt(value, 10);
-                  if (num >= 1 && num <= 20) {
-                    setPerformanceFormData({ ...performanceFormData, numberOfShows: num });
-                  }
-                }
-              }}
+              onChange={(e) => handleNumberOfShowsChange(e.target.value)}
               className="w-full p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
               placeholder="1"
               required
@@ -235,10 +269,10 @@ export function PerformanceModal({
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={performanceFormData.generalPrice}
+                  value={performanceFormData.generalPrice || ''}
                   onChange={(e) => {
                     const value = e.target.value.replace(/[^0-9]/g, '');
-                    setPerformanceFormData({ ...performanceFormData, generalPrice: parseInt(value, 10) || 0 });
+                    setPerformanceFormData({ ...performanceFormData, generalPrice: value === '' ? 0 : parseInt(value, 10) });
                   }}
                   className="w-full p-3 pr-8 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                   required
@@ -252,10 +286,10 @@ export function PerformanceModal({
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={performanceFormData.reservedPrice}
+                  value={performanceFormData.reservedPrice || ''}
                   onChange={(e) => {
                     const value = e.target.value.replace(/[^0-9]/g, '');
-                    setPerformanceFormData({ ...performanceFormData, reservedPrice: parseInt(value, 10) || 0 });
+                    setPerformanceFormData({ ...performanceFormData, reservedPrice: value === '' ? 0 : parseInt(value, 10) });
                   }}
                   className="w-full p-3 pr-8 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                   required
@@ -269,10 +303,10 @@ export function PerformanceModal({
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={performanceFormData.vip1Price}
+                  value={performanceFormData.vip1Price || ''}
                   onChange={(e) => {
                     const value = e.target.value.replace(/[^0-9]/g, '');
-                    setPerformanceFormData({ ...performanceFormData, vip1Price: parseInt(value, 10) || 0 });
+                    setPerformanceFormData({ ...performanceFormData, vip1Price: value === '' ? 0 : parseInt(value, 10) });
                   }}
                   className="w-full p-3 pr-8 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                   placeholder="30000"
@@ -286,13 +320,13 @@ export function PerformanceModal({
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={performanceFormData.vip2Price}
+                  value={performanceFormData.vip2Price || ''}
                   onChange={(e) => {
                     const value = e.target.value.replace(/[^0-9]/g, '');
-                    setPerformanceFormData({ ...performanceFormData, vip2Price: parseInt(value, 10) || 0 });
+                    setPerformanceFormData({ ...performanceFormData, vip2Price: value === '' ? 0 : parseInt(value, 10) });
                   }}
                   className="w-full p-3 pr-8 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
-                  placeholder="8500"
+                  placeholder="50000"
                 />
                 <span className="absolute right-3 top-3 text-slate-500 pointer-events-none">円</span>
               </div>

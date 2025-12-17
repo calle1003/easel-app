@@ -742,11 +742,14 @@ export default function AdminPerformersPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <input
-                          type="number"
-                          value={formData.codesPerSession[session.id] || 0}
-                          onChange={(e) => handleSetSingleCodesForSession(session.id, parseInt(e.target.value) || 0)}
-                          min={0}
-                          max={50}
+                          type="text"
+                          inputMode="numeric"
+                          value={formData.codesPerSession[session.id] || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            const num = value === '' ? 0 : Math.min(parseInt(value, 10), 50);
+                            handleSetSingleCodesForSession(session.id, num);
+                          }}
                           className="w-20 p-2 text-sm text-center border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                           placeholder="0"
                         />
@@ -949,11 +952,14 @@ export default function AdminPerformersPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <input
-                          type="number"
-                          value={codesPerSession[session.id] || 0}
-                          onChange={(e) => handleSetCodesForSession(session.id, parseInt(e.target.value) || 0)}
-                          min={0}
-                          max={50}
+                          type="text"
+                          inputMode="numeric"
+                          value={codesPerSession[session.id] || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            const num = value === '' ? 0 : Math.min(parseInt(value, 10), 50);
+                            handleSetCodesForSession(session.id, num);
+                          }}
                           className="w-20 p-2 text-sm text-center border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400"
                           placeholder="0"
                         />

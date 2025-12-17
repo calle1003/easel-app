@@ -3,18 +3,21 @@
 import { Plus, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 
+// 詳細情報フォームのデータ型定義（エクスポート）
+export interface DetailFormData {
+  flyerImages: Array<{ url: string; name: string }>;
+  painters: Array<{ name: string; instagram?: string }>;
+  choreographers: Array<{ name: string; instagram?: string; company?: string }>;
+  navigators: Array<{ name: string; instagram?: string; company?: string }>;
+  guestDancers: Array<{ name: string; instagram?: string; company?: string }>;
+  staff: Array<{ role: string; name: string; instagram?: string; company?: string }>;
+}
+
 interface DetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  detailFormData: {
-    flyerImages: Array<{ url: string; name: string }>;
-    painters: Array<{ name: string; instagram?: string }>;
-    choreographers: Array<{ name: string; instagram?: string; company?: string }>;
-    navigators: Array<{ name: string; instagram?: string; company?: string }>;
-    guestDancers: Array<{ name: string; instagram?: string; company?: string }>;
-    staff: Array<{ role: string; name: string; instagram?: string; company?: string }>;
-  };
-  setDetailFormData: (data: any) => void;
+  detailFormData: DetailFormData;
+  setDetailFormData: (data: DetailFormData) => void;
   uploadingImageIndex: number | null;
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>, index: number) => void;
   onSubmit: (e: React.FormEvent) => void;
