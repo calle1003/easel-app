@@ -1,41 +1,14 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { prisma } from '@/lib/prisma';
+import { HeroSection } from '@/components/ui/hero-section';
+import { getAllPerformances } from '@/lib/data/performances';
 
 export default async function EaselLiveTopPage() {
-  // 全ての公演を取得（最初のセッション日付の降順）
-  const performances = await prisma.performance.findMany({
-    select: {
-      id: true,
-      title: true,
-      volume: true,
-      isOnSale: true,
-      sessions: {
-        select: {
-          performanceDate: true,
-        },
-        orderBy: {
-          performanceDate: 'asc',
-        },
-        take: 1,
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  const performances = await getAllPerformances();
 
   return (
     <div>
-      {/* Hero */}
-      <section className="min-h-[300px] flex flex-col justify-center px-6 bg-warm-50">
-        <div className="max-w-3xl mx-auto text-center">
-          <p className="section-subtitle mb-4">Live</p>
-          <h1 className="font-serif text-4xl md:text-5xl font-light tracking-[0.2em] text-slate-800">
-            easel live
-          </h1>
-        </div>
-      </section>
+      <HeroSection subtitle="Live" title="easel live" />
 
       {/* About easel live */}
       <section className="py-28 px-6 bg-white">

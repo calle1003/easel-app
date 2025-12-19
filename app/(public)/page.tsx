@@ -1,30 +1,11 @@
 import Link from 'next/link';
-import { ArrowRight, ChevronRight } from 'lucide-react';
-import { prisma } from '@/lib/prisma';
-
-async function getLatestNews() {
-  try {
-    const news = await prisma.news.findMany({
-      orderBy: { publishedAt: 'desc' },
-      take: 3,
-    });
-    return news;
-  } catch (error) {
-    console.error('Failed to fetch news:', error);
-    return [];
-  }
-}
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+import { ArrowRight } from 'lucide-react';
+import { getLatestNews } from '@/lib/data/news';
+import { NewsCard } from '@/components/news/NewsCard';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export default async function HomePage() {
-  const news = await getLatestNews();
+  const news = await getLatestNews(3);
 
   return (
     <div>
@@ -73,44 +54,18 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          {news.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-400 text-sm">
-                最新のお知らせはありません
-              </p>
-            </div>
-          )}
-
-          {news.length > 0 && (
+          {news.length === 0 ? (
+            <EmptyState message="最新のお知らせはありません" />
+          ) : (
             <div className="divide-y divide-slate-200/50">
               {news.map((item) => (
-                <Link
+                <NewsCard
                   key={item.id}
-                  href={`/news/${item.id}`}
-                  className="group block py-6 hover:bg-white/50 transition-colors duration-300 -mx-4 px-4 rounded-lg"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <time className="text-xs text-slate-400">
-                          {formatDate(item.publishedAt)}
-                        </time>
-                        {item.category && (
-                          <span className="text-xs px-2 py-0.5 bg-slate-200/50 text-slate-500 rounded-full">
-                            {item.category}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-slate-700 group-hover:translate-x-1 transition-transform duration-300">
-                        {item.title}
-                      </h3>
-                    </div>
-                    <ChevronRight
-                      size={16}
-                      className="text-slate-300 group-hover:text-slate-400 transition-colors duration-300 flex-shrink-0"
-                    />
-                  </div>
-                </Link>
+                  id={item.id}
+                  title={item.title}
+                  publishedAt={item.publishedAt}
+                  category={item.category}
+                />
               ))}
             </div>
           )}
