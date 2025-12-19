@@ -362,17 +362,6 @@ export default function AdminCheckInPage() {
           />
         </div>
       </div>
-
-      {/* 非表示のビデオ要素（QRスキャン用） */}
-      {!isManualMode && (
-        <video
-          ref={videoRef}
-          className="hidden"
-          autoPlay
-          playsInline
-          muted
-        />
-      )}
     </div>
   );
 }

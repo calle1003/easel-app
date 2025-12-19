@@ -37,13 +37,11 @@
    - ✅ `app/api/orders/[id]/route.ts` (GET, PUT, DELETE)
    - ✅ `app/api/tickets/route.ts` (GET)
    - ✅ `app/api/tickets/stats/route.ts` (GET)
-   
 6. **✅ Rate Limiting実装** (`lib/rate-limit.ts`)
    - メモリベースのレート制限システム
    - ログインAPIに適用（1分に5回まで）
    - Rate limit情報をHTTPヘッダーで返却
    - 自動クリーンアップ機能
-   
 7. **✅ ログ統一** (`logger` への移行)
    - `console.log/error/warn` を `logger` に統一
    - 主要APIルート全てに適用
@@ -64,6 +62,7 @@
 ### 📝 補足情報
 
 #### Rate Limiting について
+
 `lib/rate-limit.ts` で実装されたレート制限は、現在メモリベースです。
 本番環境で複数サーバーにスケールする場合は、Redis などの外部ストレージを使用することを推奨します。
 
@@ -79,7 +78,9 @@
 ```
 
 #### 公開APIについて
+
 以下のAPIは**認証なし**で公開されています（意図的）：
+
 - `app/api/performances/on-sale/route.ts` - 販売中公演の取得（公開情報）
 - `app/api/tickets/check-in/route.ts` - チケットチェックイン（QRコード認証）
 - `app/api/tickets/view/[ticketCode]/route.ts` - チケット表示（チケットコード認証）
