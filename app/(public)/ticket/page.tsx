@@ -7,8 +7,8 @@ import { formatDate, formatTime } from '@/lib/utils';
 import { TicketQuantitySelector } from './components/TicketQuantitySelector';
 import { CustomerInfoForm } from './components/CustomerInfoForm';
 import { PriceSummary } from './components/PriceSummary';
-import { useTicketPurchase } from './hooks/useTicketPurchase';
-import { useExchangeCodeValidation } from './hooks/useExchangeCodeValidation';
+import { useTicketPurchase } from '@/hooks/useTicketPurchase';
+import { useExchangeCodeValidation } from '@/hooks/useExchangeCodeValidation';
 
 export default function TicketPurchasePage() {
   const router = useRouter();
