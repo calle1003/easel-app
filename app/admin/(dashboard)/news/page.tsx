@@ -1,22 +1,20 @@
 /**
- * ニュース管理ページ（リファクタリング版）
- * 252行 → 約120行に削減
+ * ニュース管理ページ（カスタムフック版）
+ * 145行 → 約90行に削減（-38%）
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus } from 'lucide-react';
-import { useAdminUser } from '@/components/admin/AdminAuthProvider';
 import { NewsTable } from './components/NewsTable';
 import { NewsModal } from './modals/NewsModal';
-import { News, NewsFormData } from './types';
+import { NewsFormData } from '@/types/admin';
+import { useNews } from '@/hooks/useNews';
 
 export default function AdminNewsPage() {
-  const { adminFetch } = useAdminUser();
-  const [newsList, setNewsList] = useState<News[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { newsList, loading, createNews, updateNews, deleteNews } = useNews();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<NewsFormData>({
@@ -25,51 +23,23 @@ export default function AdminNewsPage() {
     category: '',
   });
 
-  useEffect(() => {
-    fetchNews();
-  }, [adminFetch]);
-
-  const fetchNews = async () => {
-    try {
-      const response = await adminFetch('/api/news');
-      if (response.ok) {
-        const data = await response.json();
-        setNewsList(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch news:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const url = editingId ? `/api/news/${editingId}` : '/api/news';
-    const method = editingId ? 'PUT' : 'POST';
+    const data = {
+      ...formData,
+      publishedAt: new Date().toISOString(),
+    };
 
-    try {
-      const response = await adminFetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          publishedAt: new Date().toISOString(),
-        }),
-      });
+    const success = editingId ? await updateNews(editingId, data) : await createNews(data);
 
-      if (response.ok) {
-        fetchNews();
-        resetForm();
-        setIsModalOpen(false);
-      }
-    } catch (error) {
-      console.error('Failed to save news:', error);
+    if (success) {
+      resetForm();
+      setIsModalOpen(false);
     }
   };
 
-  const handleEdit = (news: News) => {
+  const handleEdit = (news: typeof newsList[0]) => {
     setEditingId(news.id);
     setFormData({
       title: news.title,
@@ -82,17 +52,6 @@ export default function AdminNewsPage() {
   const handleNew = () => {
     resetForm();
     setIsModalOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      const response = await adminFetch(`/api/news/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        fetchNews();
-      }
-    } catch (error) {
-      console.error('Failed to delete news:', error);
-    }
   };
 
   const resetForm = () => {
@@ -125,7 +84,7 @@ export default function AdminNewsPage() {
 
       {/* Content */}
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <NewsTable newsList={newsList} loading={loading} onEdit={handleEdit} onDelete={handleDelete} />
+        <NewsTable newsList={newsList} loading={loading} onEdit={handleEdit} onDelete={deleteNews} />
       </main>
 
       {/* Modal */}

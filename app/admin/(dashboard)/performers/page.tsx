@@ -1,6 +1,6 @@
 /**
  * 出演者管理ページ（リファクタリング版）
- * 1,025行 → 約300行に削減
+ * 358行（カスタムフックは型の問題で保留）
  */
 
 'use client';
@@ -13,7 +13,7 @@ import { PerformerFilters } from './components/PerformerFilters';
 import { PerformerTable } from './components/PerformerTable';
 import { AddPerformerModal } from './modals/AddPerformerModal';
 import { BatchUploadModal } from './modals/BatchUploadModal';
-import {
+import type {
   Performer,
   Performance,
   PerformerFormData,
@@ -22,7 +22,7 @@ import {
 
 export default function AdminPerformersPage() {
   const { adminFetch } = useAdminUser();
-
+  
   // データ状態
   const [performers, setPerformers] = useState<Performer[]>([]);
   const [performances, setPerformances] = useState<Performance[]>([]);
@@ -58,21 +58,8 @@ export default function AdminPerformersPage() {
     fetchPerformers();
     fetchPerformances();
   }, [adminFetch]);
-
-  // ドロップダウンを閉じる
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.filter-dropdown')) {
-        setShowPerformanceDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // データ取得関数
+  
+  //データ取得関数
   const fetchPerformers = async () => {
     try {
       const response = await adminFetch('/api/performers');
@@ -86,6 +73,19 @@ export default function AdminPerformersPage() {
       setLoading(false);
     }
   };
+
+  // ドロップダウンを閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.filter-dropdown')) {
+        setShowPerformanceDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchPerformances = async () => {
     try {
