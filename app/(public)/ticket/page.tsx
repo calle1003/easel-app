@@ -48,13 +48,43 @@ export default function TicketPurchasePage() {
       return;
     }
 
+    // 日付ラベル作成
+    const date = formatDate(selectedPerformance.performanceDate, 'short');
+    const time = formatTime(selectedPerformance.performanceTime);
+    const dateLabel = `${date} ${time} - ${selectedPerformance.title}`;
+
+    // 割引計算
+    const discountedGeneralCount = Math.min(
+      validCodesCount,
+      quantities.general
+    );
+    const discountAmount = discountedGeneralCount * 500;
+
+    // 合計金額計算
+    const subtotal =
+      quantities.general * selectedPerformance.generalPrice +
+      quantities.reserved * selectedPerformance.reservedPrice +
+      quantities.vip1 * (selectedPerformance.vip1Price || 0) +
+      quantities.vip2 * (selectedPerformance.vip2Price || 0);
+    const total = subtotal - discountAmount;
+
     // sessionStorageに保存
     const orderData = {
       performanceId: selectedPerformance.id,
+      performanceTitle: selectedPerformance.title,
+      date: selectedPerformance.performanceDate,
+      dateLabel,
       generalQuantity: quantities.general,
       reservedQuantity: quantities.reserved,
       vip1Quantity: quantities.vip1,
       vip2Quantity: quantities.vip2,
+      generalPrice: selectedPerformance.generalPrice,
+      reservedPrice: selectedPerformance.reservedPrice,
+      vip1Price: selectedPerformance.vip1Price || 0,
+      vip2Price: selectedPerformance.vip2Price || 0,
+      discountedGeneralCount,
+      discountAmount,
+      total,
       name: customerInfo.name,
       email: customerInfo.email,
       phone: customerInfo.phone,
