@@ -14,7 +14,7 @@ if (!RESEND_API_KEY) {
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000';
 
 export interface TicketInfo {
   ticketCode: string;

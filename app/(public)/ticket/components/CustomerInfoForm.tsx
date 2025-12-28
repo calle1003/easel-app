@@ -18,71 +18,56 @@ export function CustomerInfoForm({
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-slate-800">購入者情報</h2>
-
-      <div className="space-y-4">
+    <section>
+      <h2 className="text-xs tracking-wider text-slate-400 mb-4 uppercase">
+        お客様情報 <span className="text-red-400">*</span>
+      </h2>
+      <div className="space-y-5">
         <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-slate-700 mb-2"
-          >
-            お名前 <span className="text-red-500">*</span>
+          <label className="block text-sm text-slate-500 mb-2">
+            お名前 <span className="text-red-400">*</span>
           </label>
           <input
-            id="name"
             type="text"
+            name="name"
             value={data.name}
             onChange={(e) => handleChange('name', e.target.value)}
             disabled={disabled}
             placeholder="山田 太郎"
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
-            required
+            className="w-full p-4 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
           />
         </div>
-
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-slate-700 mb-2"
-          >
-            メールアドレス <span className="text-red-500">*</span>
+          <label className="block text-sm text-slate-500 mb-2">
+            メールアドレス <span className="text-red-400">*</span>
           </label>
           <input
-            id="email"
             type="email"
+            name="email"
             value={data.email}
             onChange={(e) => handleChange('email', e.target.value)}
             disabled={disabled}
             placeholder="example@email.com"
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
-            required
+            className="w-full p-4 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
           />
-          <p className="mt-1 text-xs text-slate-500">
-            チケット情報をこちらのメールアドレスに送信します
-          </p>
+          <p className="mt-1 text-xs text-slate-400">※チケット情報をお送りします</p>
         </div>
-
         <div>
-          <label
-            htmlFor="phone"
-            className="block text-sm font-medium text-slate-700 mb-2"
-          >
-            電話番号 <span className="text-red-500">*</span>
+          <label className="block text-sm text-slate-500 mb-2">
+            電話番号 <span className="text-red-400">*</span>
           </label>
           <input
-            id="phone"
             type="tel"
+            name="phone"
             value={data.phone}
             onChange={(e) => handleChange('phone', e.target.value)}
             disabled={disabled}
             placeholder="090-1234-5678"
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 disabled:bg-slate-50 disabled:cursor-not-allowed"
-            required
+            className="w-full p-4 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 transition-all disabled:bg-slate-50 disabled:cursor-not-allowed"
           />
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

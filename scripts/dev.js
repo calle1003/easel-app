@@ -2,8 +2,8 @@
 
 const { spawn } = require('child_process');
 
-// Next.js devサーバーを起動
-const nextDev = spawn('next', ['dev'], {
+// Next.js devサーバーを起動（スマホからもアクセス可能にする）
+const nextDev = spawn('next', ['dev', '-H', '0.0.0.0'], {
   stdio: ['inherit', 'pipe', 'pipe'],
   shell: true,
 });

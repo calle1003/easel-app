@@ -40,17 +40,19 @@ export const QRScanner = forwardRef<HTMLVideoElement, QRScannerProps>(
         </div>
 
         {/* カメラビュー */}
-        <div className="relative bg-black aspect-video">
+        <div className="relative bg-black w-full" style={{ minHeight: '400px', maxHeight: '600px' }}>
           <video
             ref={ref}
             className="w-full h-full object-cover"
+            style={{ minHeight: '400px', maxHeight: '600px' }}
             autoPlay
             playsInline
             muted
           />
 
           {/* オーバーレイ */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          {(!isCameraReady || cameraError || scanStatus === 'scanning') && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             {!isCameraReady && !cameraError && (
               <div className="text-white text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
@@ -74,6 +76,7 @@ export const QRScanner = forwardRef<HTMLVideoElement, QRScannerProps>(
               </div>
             )}
           </div>
+          )}
 
           {/* スキャンフレーム */}
           {isCameraReady && scanStatus === 'idle' && (

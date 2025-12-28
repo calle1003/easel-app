@@ -36,6 +36,9 @@ function TicketSuccessContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // sessionStorageをクリア（注文完了後は不要）
+    sessionStorage.removeItem('orderData');
+
     const sessionId = searchParams.get('session_id');
     const orderId = searchParams.get('order_id');
 

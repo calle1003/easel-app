@@ -20,6 +20,8 @@ export interface Stats {
   totalCheckedIn: number;
   generalCheckedIn: number;
   reservedCheckedIn: number;
+  vip1CheckedIn?: number;
+  vip2CheckedIn?: number;
 }
 
 export type ScanStatus = 'idle' | 'scanning' | 'verified' | 'success' | 'error' | 'already-used';

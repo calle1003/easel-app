@@ -94,7 +94,7 @@ export const config = {
   
   // アプリケーション
   app: {
-    url: getEnvVar('NEXT_PUBLIC_APP_URL', false) || 'http://localhost:3000',
+    url: getEnvVar('NEXT_PUBLIC_APP_URL', false) || 'https://localhost:3000',
     env: process.env.NODE_ENV || 'development',
     isDevelopment: process.env.NODE_ENV === 'development',
     isProduction: process.env.NODE_ENV === 'production',

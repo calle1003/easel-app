@@ -148,7 +148,7 @@ export default function TicketViewPage() {
           {/* ヘッダー */}
           <div className="bg-gradient-to-r from-slate-800 to-slate-600 text-white p-6">
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-2xl font-bold">easel チケット</h1>
+              <h1 className="text-2xl font-bold text-white">easel チケット</h1>
               <button
                 onClick={handleManualRefresh}
                 className="p-2 hover:bg-white/10 rounded-lg transition"

@@ -134,14 +134,42 @@ export function useTicketPurchase() {
     );
   }, [quantities, selectedPerformance]);
 
-  // チケット枚数変更
+  // チケット枚数変更（残席制限を考慮）
   const handleQuantityChange = (
     type: keyof TicketQuantities,
     delta: number
   ) => {
+    if (!selectedPerformance) return;
+
+    const getMax = (type: keyof TicketQuantities) => {
+      switch (type) {
+        case 'general':
+          return Math.min(
+            selectedPerformance.generalCapacity - selectedPerformance.generalSold,
+            10
+          );
+        case 'reserved':
+          return Math.min(
+            selectedPerformance.reservedCapacity -
+              selectedPerformance.reservedSold,
+            10
+          );
+        case 'vip1':
+          return Math.min(
+            selectedPerformance.vip1Capacity - selectedPerformance.vip1Sold,
+            10
+          );
+        case 'vip2':
+          return Math.min(
+            selectedPerformance.vip2Capacity - selectedPerformance.vip2Sold,
+            10
+          );
+      }
+    };
+
     setQuantities((prev) => ({
       ...prev,
-      [type]: Math.max(0, Math.min(10, prev[type] + delta)),
+      [type]: Math.max(0, Math.min(getMax(type), prev[type] + delta)),
     }));
   };
 

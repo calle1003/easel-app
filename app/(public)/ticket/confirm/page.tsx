@@ -324,11 +324,21 @@ export default function TicketConfirmPage() {
               disabled={isLoading}
               className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? '処理中...' : '決済へ進む（Stripe）'}
+              {isLoading
+                ? '処理中...'
+                : total === 0
+                ? 'チケットを受け取る'
+                : '決済へ進む（Stripe）'}
             </button>
+            {total === 0 ? (
+              <p className="text-center text-sm text-slate-400">
+                ※引換券により全額無料となります。決済は不要です。
+              </p>
+            ) : (
             <p className="text-center text-sm text-slate-400">
               ※決済はStripeによる安全なクレジットカード決済です
             </p>
+            )}
             <button
               type="button"
               onClick={handleBack}

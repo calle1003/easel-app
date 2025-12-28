@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon",
     "dev:manual": "node scripts/dev.js",
+    "dev:https": "node server.js",
     "dev:verbose": "next dev",
     "build": "next build",
     "start": "next start",

@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { logger } from './logger';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000';
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 // SMTP設定を環境変数から取得

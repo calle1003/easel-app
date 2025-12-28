@@ -18,9 +18,18 @@ export async function GET() {
       },
     });
 
+    // チケット種別ごとに集計
+    const generalCheckedIn = checkedInToday.filter(t => t.ticketType === 'GENERAL').length;
+    const reservedCheckedIn = checkedInToday.filter(t => t.ticketType === 'RESERVED').length;
+    const vip1CheckedIn = checkedInToday.filter(t => t.ticketType === 'VIP1').length;
+    const vip2CheckedIn = checkedInToday.filter(t => t.ticketType === 'VIP2').length;
+
     return NextResponse.json({
-      count: checkedInToday.length,
-      tickets: checkedInToday,
+      totalCheckedIn: checkedInToday.length,
+      generalCheckedIn,
+      reservedCheckedIn,
+      vip1CheckedIn,
+      vip2CheckedIn,
     });
   } catch (error) {
     console.error('Failed to fetch today stats:', error);

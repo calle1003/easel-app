@@ -30,13 +30,22 @@ export default function AdminCheckInPage() {
   });
   const [isManualMode, setIsManualMode] = useState(false);
   const [manualInput, setManualInput] = useState('');
+  const [scannedCodes, setScannedCodes] = useState<Set<string>>(new Set());
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const scanControlsRef = useRef<any>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const isScanningRef = useRef<boolean>(false);
+  const scanStatusRef = useRef<ScanStatus>('idle');
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string>('');
+
+  // scanStatusとscanStatusRefを同期的に更新するヘルパー
+  const updateScanStatus = (status: ScanStatus) => {
+    setScanStatus(status);
+    scanStatusRef.current = status;
+  };
 
   // 統計情報を取得
   useEffect(() => {
@@ -120,7 +129,10 @@ export default function AdminCheckInPage() {
         undefined,
         videoRef.current,
         async (result) => {
-          if (result) {
+          // idle状態かつスキャン中でない場合のみ処理
+          if (result && !isScanningRef.current && scanStatusRef.current === 'idle') {
+            isScanningRef.current = true;
+            scanStatusRef.current = 'scanning';
             const code = result.getText();
             await stopCamera();
             await handleScan(code);
@@ -150,6 +162,7 @@ export default function AdminCheckInPage() {
   const stopCamera = async () => {
     try {
       setIsCameraReady(false);
+      isScanningRef.current = false;
       
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -195,11 +208,31 @@ export default function AdminCheckInPage() {
   };
 
   const handleScan = async (ticketCode: string) => {
-    if (scanStatus === 'scanning' || scanStatus === 'verified') return;
+    if (scanStatus === 'scanning' || scanStatus === 'verified') {
+      isScanningRef.current = false;
+      return;
+    }
+
+    // すでにスキャン済みのコードはスキップ
+    if (scannedCodes.has(ticketCode)) {
+      updateScanStatus('error');
+      setErrorMessage('このチケットは既にスキャン済みです');
+      playErrorSound();
+      vibrate([200, 100, 200]);
+      isScanningRef.current = false;
+      
+      // エラー後、3秒待ってカメラ再起動
+      setTimeout(() => {
+        if (!isManualMode) {
+          handleReset();
+        }
+      }, 3000);
+      return;
+    }
 
     await stopCamera();
 
-    setScanStatus('scanning');
+    updateScanStatus('scanning');
     setTicketInfo(null);
     setErrorMessage('');
 
@@ -217,43 +250,51 @@ export default function AdminCheckInPage() {
       const verifyData = await verifyResponse.json();
 
       if (!verifyData.valid) {
-        setScanStatus('error');
+        updateScanStatus('error');
         setErrorMessage(verifyData.error || '無効なチケットです');
         setTicketInfo(verifyData.ticket || null);
         playErrorSound();
         vibrate([200, 100, 200]);
         
         if (verifyData.error && verifyData.error.includes('使用済み')) {
-          setScanStatus('already-used');
+          updateScanStatus('already-used');
         }
+        
+        // スキャン済みコードに追加
+        setScannedCodes(prev => new Set(prev).add(ticketCode));
+        isScanningRef.current = false;
+        
+        // エラー後、3秒待ってカメラ再起動
+        setTimeout(() => {
+          if (!isManualMode) {
+            handleReset();
+          }
+        }, 3000);
         return;
       }
 
-      // チェックイン処理
-      const checkInResponse = await adminFetch('/api/tickets/check-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketCode }),
-      });
-
-      if (!checkInResponse.ok) {
-        throw new Error('チェックインに失敗しました');
-      }
-
-      const checkInData = await checkInResponse.json();
-
-      if (checkInData.success) {
-        setScanStatus('success');
-        setTicketInfo(verifyData.ticket);
-        playSuccessSound();
-        vibrate([100]);
-        fetchStats();
-      }
+      // 検証成功 - チケット情報を表示（管理者の判断を待つ）
+      updateScanStatus('verified');
+      setTicketInfo(verifyData.ticket);
+      playSuccessSound();
+      vibrate([100]);
+      
+      // スキャン済みコードに追加
+      setScannedCodes(prev => new Set(prev).add(ticketCode));
+      isScanningRef.current = false;
     } catch (error: any) {
-      setScanStatus('error');
+      updateScanStatus('error');
       setErrorMessage(error.message || 'エラーが発生しました');
       playErrorSound();
       vibrate([200, 100, 200]);
+      isScanningRef.current = false;
+      
+      // エラー後、3秒待ってカメラ再起動
+      setTimeout(() => {
+        if (!isManualMode) {
+          handleReset();
+        }
+      }, 3000);
     }
   };
 
@@ -264,10 +305,74 @@ export default function AdminCheckInPage() {
     setManualInput('');
   };
 
-  const handleReset = () => {
-    setScanStatus('idle');
+  const handleCheckIn = async () => {
+    if (!ticketInfo) return;
+
+    try {
+      const checkInResponse = await adminFetch('/api/tickets/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketCode: ticketInfo.ticketCode }),
+      });
+
+      if (!checkInResponse.ok) {
+        throw new Error('チェックインに失敗しました');
+      }
+
+      const checkInData = await checkInResponse.json();
+
+      if (checkInData.success) {
+        updateScanStatus('success');
+        playSuccessSound();
+        vibrate([100]);
+        fetchStats();
+        
+        // 3秒後に自動的にリセットしてカメラを再起動
+        setTimeout(() => {
+          handleReset();
+        }, 3000);
+      }
+    } catch (error: any) {
+      updateScanStatus('error');
+      setErrorMessage(error.message || 'チェックインに失敗しました');
+      playErrorSound();
+      vibrate([200, 100, 200]);
+      
+      // エラー後、3秒待ってカメラ再起動
+      setTimeout(() => {
+        if (!isManualMode) {
+          handleReset();
+        }
+      }, 3000);
+    }
+  };
+
+  const handleReject = async () => {
+    updateScanStatus('idle');
+    setTicketInfo(null);
+    setErrorMessage('入場を拒否しました');
+    playErrorSound();
+    vibrate([200]);
+    isScanningRef.current = false;
+    
+    // カメラを完全に停止してから再起動
+    if (!isManualMode) {
+      await stopCamera();
+      setTimeout(() => startCamera(), 500);
+    }
+  };
+
+  const handleReset = async () => {
+    updateScanStatus('idle');
     setTicketInfo(null);
     setErrorMessage('');
+    isScanningRef.current = false;
+    
+    // カメラを完全に停止してから再起動
+    if (!isManualMode) {
+      await stopCamera();
+      setTimeout(() => startCamera(), 500);
+    }
   };
 
   const playSuccessSound = () => {
@@ -359,20 +464,11 @@ export default function AdminCheckInPage() {
             scanStatus={scanStatus}
             ticketInfo={ticketInfo}
             errorMessage={errorMessage}
+            onCheckIn={handleCheckIn}
+            onReject={handleReject}
           />
         </div>
       </div>
-
-      {/* 非表示のビデオ要素（QRスキャン用） */}
-      {!isManualMode && (
-        <video
-          ref={videoRef}
-          className="hidden"
-          autoPlay
-          playsInline
-          muted
-        />
-      )}
     </div>
   );
 }

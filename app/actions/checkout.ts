@@ -5,8 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import type { CheckoutRequest, CheckoutResponse } from '@/types/checkout';
 import { revalidatePath } from 'next/cache';
+import { randomUUID } from 'crypto';
+import { sendPurchaseConfirmationEmail } from '@/lib/email';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000';
 
 export async function createCheckoutSession(
   request: CheckoutRequest
@@ -177,9 +179,173 @@ export async function createCheckoutSession(
       });
     }
 
-    // 合計金額が0円の場合はエラー（Stripeは0円決済不可）
+    // 合計金額が0円の場合は決済をスキップして直接注文を完了
     if (totalAmount <= 0) {
-      return { success: false, error: 'お支払い金額が0円のため、決済は不要です。' };
+      logger.info('Creating free order (0 yen)', {
+        customerEmail: request.customerEmail,
+        totalAmount: 0,
+        generalQuantity: request.generalQuantity,
+        reservedQuantity: request.reservedQuantity,
+        vip1Quantity: vip1Qty,
+        vip2Quantity: vip2Qty,
+        exchangeCodes: validExchangeCodes.length,
+      });
+
+      // トランザクションで注文作成と引換券使用済み処理を実行
+      const result = await prisma.$transaction(async (tx) => {
+        // 注文を完了状態で作成（0円なので支払い済み）
+        const order = await tx.order.create({
+          data: {
+            stripeSessionId: `FREE_${Date.now()}`,
+            performanceDate: performanceSession.performanceDate.toISOString().split('T')[0],
+            performanceLabel: request.dateLabel || performance.title,
+            generalQuantity: request.generalQuantity,
+            reservedQuantity: request.reservedQuantity,
+            vip1Quantity: vip1Qty,
+            vip2Quantity: vip2Qty,
+            generalPrice: performance.generalPrice,
+            reservedPrice: performance.reservedPrice,
+            vip1Price: performance.vip1Price || 0,
+            vip2Price: performance.vip2Price || 0,
+            discountedGeneralCount: freeGeneralQuantity,
+            discountAmount: discountAmount,
+            totalAmount: 0,
+            customerName: request.customerName,
+            customerEmail: request.customerEmail,
+            customerPhone: request.customerPhone,
+            status: 'PAID',
+            paidAt: new Date(),
+            exchangeCodes: validExchangeCodes.join(','),
+          },
+        });
+
+        // チケット発行
+        const ticketPromises = [];
+
+        // 一般席チケット
+        for (let i = 0; i < request.generalQuantity; i++) {
+          ticketPromises.push(
+            tx.ticket.create({
+              data: {
+                orderId: order.id,
+                ticketCode: randomUUID(),
+                ticketType: 'GENERAL',
+                isExchanged: validExchangeCodes.length > 0,
+              },
+            })
+          );
+        }
+
+        // 指定席チケット
+        for (let i = 0; i < request.reservedQuantity; i++) {
+          ticketPromises.push(
+            tx.ticket.create({
+              data: {
+                orderId: order.id,
+                ticketCode: randomUUID(),
+                ticketType: 'RESERVED',
+                isExchanged: validExchangeCodes.length > 0,
+              },
+            })
+          );
+        }
+
+        // VIP①席チケット
+        for (let i = 0; i < vip1Qty; i++) {
+          ticketPromises.push(
+            tx.ticket.create({
+              data: {
+                orderId: order.id,
+                ticketCode: randomUUID(),
+                ticketType: 'VIP1',
+                isExchanged: validExchangeCodes.length > 0,
+              },
+            })
+          );
+        }
+
+        // VIP②席チケット
+        for (let i = 0; i < vip2Qty; i++) {
+          ticketPromises.push(
+            tx.ticket.create({
+              data: {
+                orderId: order.id,
+                ticketCode: randomUUID(),
+                ticketType: 'VIP2',
+                isExchanged: validExchangeCodes.length > 0,
+              },
+            })
+          );
+        }
+
+        await Promise.all(ticketPromises);
+
+        // 引換券コードを使用済みにマーク
+        for (const code of validExchangeCodes) {
+          await tx.exchangeCode.update({
+            where: { code },
+            data: {
+              isUsed: true,
+              usedAt: new Date(),
+              orderId: order.id,
+            },
+          });
+        }
+
+        return order;
+      });
+
+      logger.success('Free order completed successfully', {
+        orderId: result.id,
+        totalAmount: 0,
+      });
+
+      // メール送信
+      try {
+        const orderWithTickets = await prisma.order.findUnique({
+          where: { id: result.id },
+          include: { tickets: true },
+        });
+
+        if (orderWithTickets) {
+          await sendPurchaseConfirmationEmail(orderWithTickets.customerEmail, {
+            orderId: orderWithTickets.id,
+            performanceLabel: orderWithTickets.performanceLabel,
+            performanceDate: orderWithTickets.performanceDate,
+            customerName: orderWithTickets.customerName,
+            totalAmount: orderWithTickets.totalAmount,
+            generalQuantity: orderWithTickets.generalQuantity,
+            reservedQuantity: orderWithTickets.reservedQuantity,
+            tickets: orderWithTickets.tickets.map((ticket) => ({
+              ticketCode: ticket.ticketCode,
+              ticketType: ticket.ticketType,
+              isExchanged: ticket.isExchanged,
+            })),
+          });
+
+          logger.success('Confirmation email sent', {
+            orderId: result.id,
+            email: orderWithTickets.customerEmail,
+          });
+        }
+      } catch (emailError: any) {
+        // メール送信失敗してもエラーにはしない（注文は完了している）
+        logger.error('Email sending failed', {
+          orderId: result.id,
+          error: emailError.message,
+        });
+      }
+
+      revalidatePath('/ticket');
+
+      return {
+        success: true,
+        data: {
+          sessionId: result.stripeSessionId,
+          url: `${APP_URL}/ticket/success?session_id=${result.stripeSessionId}`,
+          orderId: result.id,
+        },
+      };
     }
 
     logger.info('Creating Stripe checkout session', {
